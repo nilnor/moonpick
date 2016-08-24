@@ -1,0 +1,36 @@
+#! /usr/bin/env lua
+
+local moonpick = require "src/moonpick"
+local moon = require 'moon'
+
+local args = {...}
+if #args == 0 then
+  print "Usage: moonpick <file>, [file2, ..]"
+  os.exit(1)
+end
+
+local errors = 0
+
+for i = 1, #args do
+  file = args[i]
+  local inspections, err = moonpick.lint_file(file)
+  if not inspections then
+    errors = errors + 1
+    print(file .. '\n')
+    print(err)
+  else
+    if #inspections > 0 then
+      print(file .. '\n')
+      errors = #inspections
+      for j = 1, #inspections do
+        inspection = inspections[j]
+        out = "line " .. inspection.line .. ': ' .. inspection.msg
+        print(out)
+        print(string.rep('=', #out))
+        print('> ' .. inspection.code .. '\n')
+      end
+    end
+  end
+end
+
+os.exit(errors > 0 and 1 or 0)

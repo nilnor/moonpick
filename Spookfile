@@ -1,0 +1,19 @@
+{:is_file} = require "fs"
+
+log_level "INFO"
+
+spec = command "busted"
+compile = command "moonc"
+
+watch "src", "spec", ->
+  on_changed "^spec/(.*)_spec%.moon", (a) ->
+    spec "spec/#{a}_spec.moon"
+
+  on_changed "^src/(.+)%.moon", (base) ->
+    spec_file = "spec/#{base}_spec.moon"
+    spec_file = "spec/moonpick_spec.moon" unless is_file(spec_file)
+
+    compile("src/#{base}.moon") +
+    spec(spec_file)
+
+notifier "#{os.getenv('HOME')}/.spook/notifiers"
