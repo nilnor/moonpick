@@ -4,10 +4,11 @@ moonpick = base.loadfile('src/moonpick.moon')!
 describe 'moonpick', ->
   clean = (code) ->
     initial_indent = code\match '^([ \t]*)%S'
+    code = code\gsub '\n\n', "\n#{initial_indent}\n"
     lines = [l\gsub("^#{initial_indent}", '') for l in code\gmatch('[^\n]+')]
     code = table.concat lines, '\n'
-    code = code\match '^%s*(.*)%s*$'
-    code
+    code = code\match '^%s*(.-)%s*$'
+    code .. '\n'
 
   lint = (code, opts) ->
     inspections = assert moonpick.lint code, opts
@@ -432,3 +433,20 @@ describe 'moonpick', ->
       assert.same {
         {line: 5, msg: 'accessing global - `x`'}
       }, res
+
+  describe 'format_inspections(inspections)', ->
+    it 'returns a string representation of inspections', ->
+      code = clean [[
+      {:foo} = _G.bar
+      {bar: other} = _G.zed
+      ]]
+      inspections = assert moonpick.lint code, {}
+      assert.same clean([[
+        line 1: declared but unused - `foo`
+        ===================================
+        > {:foo} = _G.bar
+
+        line 2: declared but unused - `other`
+        =====================================
+        > {bar: other} = _G.zed
+      ]]), moonpick.format_inspections(inspections)

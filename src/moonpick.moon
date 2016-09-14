@@ -380,6 +380,16 @@ report_on_scope = (scope, opts = {}, inspections = {}) ->
 
   inspections
 
+format_inspections = (inspections) ->
+  chunks = {}
+  for inspection in *inspections
+    chunk = "line #{inspection.line}: #{inspection.msg}\n"
+    chunk ..= string.rep('=', #chunk - 1) .. '\n'
+    chunk ..= "> #{inspection.code}\n"
+    chunks[#chunks + 1]  = chunk
+
+  table.concat chunks, '\n'
+
 report = (scope, code, opts = {}) ->
   declared_whitelist = {k, true for k in *(opts.declared_whitelist or default_declared_whitelist)}
   global_whitelist = builtin_global_whitelist
@@ -457,13 +467,13 @@ lint = (code, opts = {}) ->
   walk tree, scope
   report scope, code, opts
 
-lint_file = (file) ->
+lint_file = (file, opts = {}) ->
   fh = assert io.open file, 'r'
   code = fh\read '*a'
   fh\close!
-  config_file = config_for file
+  config_file = opts.lint_config or config_for(file)
   opts = config_file and load_config(config_file, file) or {}
   opts.file = file
   lint code, opts
 
-:lint, :lint_file, :config_for, :load_config
+:lint, :lint_file, :config_for, :load_config, :format_inspections

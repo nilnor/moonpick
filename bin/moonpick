@@ -1,6 +1,18 @@
 #! /usr/bin/env lua
 
-local moonpick = require "src/moonpick"
+local status, moonpick = pcall(require, "moonpick")
+if not status then
+  local chunk
+  status, chunk = pcall(loadfile, "src/moonpick.lua")
+  if status then
+    moonpick = chunk()
+  end
+end
+
+if not status then
+  error "`moonpick` module not found, problems with the installation?"
+end
+
 local moon = require 'moon'
 
 local args = {...}
@@ -21,14 +33,8 @@ for i = 1, #args do
   else
     if #inspections > 0 then
       print(file .. '\n')
-      errors = #inspections
-      for j = 1, #inspections do
-        inspection = inspections[j]
-        out = "line " .. inspection.line .. ': ' .. inspection.msg
-        print(out)
-        print(string.rep('=', #out))
-        print('> ' .. inspection.code .. '\n')
-      end
+      errors = errors + #inspections
+      print(moonpick.format_inspections(inspections))
     end
   end
 end

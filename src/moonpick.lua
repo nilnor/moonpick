@@ -538,6 +538,18 @@ report_on_scope = function(scope, opts, inspections)
   end
   return inspections
 end
+local format_inspections
+format_inspections = function(inspections)
+  local chunks = { }
+  for _index_0 = 1, #inspections do
+    local inspection = inspections[_index_0]
+    local chunk = "line " .. tostring(inspection.line) .. ": " .. tostring(inspection.msg) .. "\n"
+    chunk = chunk .. (string.rep('=', #chunk - 1) .. '\n')
+    chunk = chunk .. "> " .. tostring(inspection.code) .. "\n"
+    chunks[#chunks + 1] = chunk
+  end
+  return table.concat(chunks, '\n')
+end
 local report
 report = function(scope, code, opts)
   if opts == nil then
@@ -669,12 +681,15 @@ lint = function(code, opts)
   return report(scope, code, opts)
 end
 local lint_file
-lint_file = function(file)
+lint_file = function(file, opts)
+  if opts == nil then
+    opts = { }
+  end
   local fh = assert(io.open(file, 'r'))
   local code = fh:read('*a')
   fh:close()
-  local config_file = config_for(file)
-  local opts = config_file and load_config(config_file, file) or { }
+  local config_file = opts.lint_config or config_for(file)
+  opts = config_file and load_config(config_file, file) or { }
   opts.file = file
   return lint(code, opts)
 end
@@ -682,5 +697,6 @@ return {
   lint = lint,
   lint_file = lint_file,
   config_for = config_for,
-  load_config = load_config
+  load_config = load_config,
+  format_inspections = format_inspections
 }
