@@ -1,5 +1,7 @@
 # Moonpick
 
+[![Build Status](https://travis-ci.org/nilnor/moonpick.svg?branch=master)](https://travis-ci.org/nilnor/moonpick)
+
 ## What is it?
 
 Moonpick is an alternative linter for [Moonscript](http://moonscript.org/).
