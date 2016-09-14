@@ -13,13 +13,23 @@ if not status then
   error "`moonpick` module not found, problems with the installation?"
 end
 
-local moon = require 'moon'
+local function validate_usage(args)
+  bail = function()
+    print "Usage: moonpick <file>, [file2, ..]"
+    os.exit(1)
+  end
+
+  if #args == 0 then bail() end
+
+  for _, a in ipairs(args) do
+    if a:match('^%-') then
+      bail()
+    end
+  end
+end
 
 local args = {...}
-if #args == 0 then
-  print "Usage: moonpick <file>, [file2, ..]"
-  os.exit(1)
-end
+validate_usage(args)
 
 local errors = 0
 
