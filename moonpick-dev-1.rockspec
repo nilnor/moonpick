@@ -19,7 +19,7 @@ description = {
 }
 
 dependencies = {
-  "lua >= 5.1, < 5.3",
+  "lua >= 5.1",
   "moonscript ~> 0.4",
 }
 
