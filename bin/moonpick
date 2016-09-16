@@ -2,11 +2,9 @@
 
 local status, moonpick = pcall(require, "moonpick")
 if not status then
-  local chunk
-  status, chunk = pcall(loadfile, "src/moonpick.lua")
-  if status then
-    moonpick = chunk()
-  end
+  local_path = ';./src/?.lua;./src/?/init.lua'
+  package.path = package.path .. local_path
+  status, moonpick = pcall(require, "moonpick")
 end
 
 if not status then

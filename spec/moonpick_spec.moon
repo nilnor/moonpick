@@ -1,8 +1,7 @@
 -- Copyright 2016 Nils Nordman <nino@nordman.org>
 -- License: MIT (see LICENSE.md at the top-level directory of the distribution)
 
-base = require 'moonscript.base'
-moonpick = base.loadfile('src/moonpick.moon')!
+moonpick = require 'moonpick'
 
 describe 'moonpick', ->
   clean = (code) ->
