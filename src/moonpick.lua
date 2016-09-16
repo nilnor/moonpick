@@ -5,13 +5,13 @@ do
   pos_to_line, get_line = _obj_0.pos_to_line, _obj_0.get_line
 end
 local append = table.insert
-local default_declared_whitelist = {
+local builtin_whitelist_unused = {
   '_G',
   '...',
   '_',
   'tostring'
 }
-local builtin_global_whitelist = {
+local builtin_whitelist_globals = {
   '_G',
   '_VERSION',
   'assert',
@@ -483,12 +483,12 @@ report_on_scope = function(scope, opts, inspections)
   if inspections == nil then
     inspections = { }
   end
-  local declared_whitelist, global_whitelist
-  declared_whitelist, global_whitelist = opts.declared_whitelist, opts.global_whitelist
+  local whitelist_unused, whitelist_globals
+  whitelist_unused, whitelist_globals = opts.whitelist_unused, opts.whitelist_globals
   for name, decl in pairs(scope.declared) do
     local _continue_0 = false
     repeat
-      if scope.used[name] or declared_whitelist[name] then
+      if scope.used[name] or whitelist_unused[name] then
         _continue_0 = true
         break
       end
@@ -513,7 +513,7 @@ report_on_scope = function(scope, opts, inspections)
   for name, node in pairs(scope.used) do
     local _continue_0 = false
     repeat
-      if not (scope.declared[name] or global_whitelist[name]) then
+      if not (scope.declared[name] or whitelist_globals[name]) then
         if name == 'self' or name == 'super' then
           if scope.type == 'method' or scope:has_parent('method') then
             _continue_0 = true
@@ -555,41 +555,57 @@ report = function(scope, code, opts)
   if opts == nil then
     opts = { }
   end
-  local declared_whitelist
-  do
-    local _tbl_0 = { }
-    local _list_0 = (opts.declared_whitelist or default_declared_whitelist)
-    for _index_0 = 1, #_list_0 do
-      local k = _list_0[_index_0]
-      _tbl_0[k] = true
-    end
-    declared_whitelist = _tbl_0
-  end
-  local global_whitelist = builtin_global_whitelist
-  if opts.global_whitelist then
+  local whitelist_unused = builtin_whitelist_unused
+  if opts.whitelist_unused then
     do
       local _accum_0 = { }
       local _len_0 = 1
-      for _index_0 = 1, #global_whitelist do
-        local t = global_whitelist[_index_0]
+      for _index_0 = 1, #whitelist_unused do
+        local t = whitelist_unused[_index_0]
         _accum_0[_len_0] = t
         _len_0 = _len_0 + 1
       end
-      global_whitelist = _accum_0
+      whitelist_unused = _accum_0
     end
-    local _list_0 = opts.global_whitelist
+    local _list_0 = opts.whitelist_unused
     for _index_0 = 1, #_list_0 do
       local t = _list_0[_index_0]
-      append(global_whitelist, t)
+      append(whitelist_unused, t)
     end
   end
   do
     local _tbl_0 = { }
-    for _index_0 = 1, #global_whitelist do
-      local k = global_whitelist[_index_0]
+    for _index_0 = 1, #whitelist_unused do
+      local k = whitelist_unused[_index_0]
       _tbl_0[k] = true
     end
-    global_whitelist = _tbl_0
+    whitelist_unused = _tbl_0
+  end
+  local whitelist_globals = builtin_whitelist_globals
+  if opts.whitelist_globals then
+    do
+      local _accum_0 = { }
+      local _len_0 = 1
+      for _index_0 = 1, #whitelist_globals do
+        local t = whitelist_globals[_index_0]
+        _accum_0[_len_0] = t
+        _len_0 = _len_0 + 1
+      end
+      whitelist_globals = _accum_0
+    end
+    local _list_0 = opts.whitelist_globals
+    for _index_0 = 1, #_list_0 do
+      local t = _list_0[_index_0]
+      append(whitelist_globals, t)
+    end
+  end
+  do
+    local _tbl_0 = { }
+    for _index_0 = 1, #whitelist_globals do
+      local k = whitelist_globals[_index_0]
+      _tbl_0[k] = true
+    end
+    whitelist_globals = _tbl_0
   end
   local report_params = opts.report_params
   if report_params == nil then
@@ -597,8 +613,8 @@ report = function(scope, code, opts)
   end
   local inspections = { }
   opts = {
-    global_whitelist = global_whitelist,
-    declared_whitelist = declared_whitelist,
+    whitelist_globals = whitelist_globals,
+    whitelist_unused = whitelist_unused,
     report_params = report_params
   }
   report_on_scope(scope, opts, inspections)
@@ -653,17 +669,24 @@ load_config = function(config_file, file)
   local chunk = assert(loader(config_file))
   local config = chunk() or { }
   local opts = { }
-  if config.whitelist_globals then
-    local wl = { }
-    for k, v in pairs(config.whitelist_globals) do
-      if file:find(k) then
-        for _index_0 = 1, #v do
-          local token = v[_index_0]
-          append(wl, token)
+  local _list_0 = {
+    'whitelist_globals',
+    'whitelist_unused'
+  }
+  for _index_0 = 1, #_list_0 do
+    local list = _list_0[_index_0]
+    if config[list] then
+      local wl = { }
+      for k, v in pairs(config[list]) do
+        if file:find(k) then
+          for _index_1 = 1, #v do
+            local token = v[_index_1]
+            append(wl, token)
+          end
         end
       end
+      opts[list] = wl
     end
-    opts.global_whitelist = wl
   end
   return opts
 end

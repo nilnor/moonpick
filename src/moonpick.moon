@@ -6,14 +6,14 @@ parse = require "moonscript.parse"
 
 append = table.insert
 
-default_declared_whitelist = {
+builtin_whitelist_unused = {
   '_G',
   '...',
   '_',
   'tostring' -- due to string interpolations
 }
 
-builtin_global_whitelist = {
+builtin_whitelist_globals = {
   '_G'
   '_VERSION'
   'assert'
@@ -349,10 +349,10 @@ walk = (tree, scope) ->
           walk { sub_node }, scope
 
 report_on_scope = (scope, opts = {}, inspections = {}) ->
-  {:declared_whitelist, :global_whitelist} = opts
+  {:whitelist_unused, :whitelist_globals} = opts
 
   for name, decl in pairs scope.declared
-    continue if scope.used[name] or declared_whitelist[name]
+    continue if scope.used[name] or whitelist_unused[name]
     if decl.is_exported or scope.exported_from and scope.exported_from < decl.pos
       continue
 
@@ -365,7 +365,7 @@ report_on_scope = (scope, opts = {}, inspections = {}) ->
     }
 
   for name, node in pairs scope.used
-    unless scope.declared[name] or global_whitelist[name]
+    unless scope.declared[name] or whitelist_globals[name]
       if name == 'self' or name == 'super'
         if scope.type == 'method' or scope\has_parent('method')
           continue
@@ -391,20 +391,26 @@ format_inspections = (inspections) ->
   table.concat chunks, '\n'
 
 report = (scope, code, opts = {}) ->
-  declared_whitelist = {k, true for k in *(opts.declared_whitelist or default_declared_whitelist)}
-  global_whitelist = builtin_global_whitelist
-  if opts.global_whitelist
-    global_whitelist = [t for t in *global_whitelist]
-    append(global_whitelist, t) for t in *opts.global_whitelist
+  whitelist_unused = builtin_whitelist_unused
+  if opts.whitelist_unused
+    whitelist_unused = [t for t in *whitelist_unused]
+    append(whitelist_unused, t) for t in *opts.whitelist_unused
 
-  global_whitelist = {k, true for k in *global_whitelist}
+  whitelist_unused = {k, true for k in *whitelist_unused}
+
+  whitelist_globals = builtin_whitelist_globals
+  if opts.whitelist_globals
+    whitelist_globals = [t for t in *whitelist_globals]
+    append(whitelist_globals, t) for t in *opts.whitelist_globals
+
+  whitelist_globals = {k, true for k in *whitelist_globals}
   report_params = opts.report_params
   report_params = false if report_params == nil
 
   inspections = {}
   opts = {
-    :global_whitelist,
-    :declared_whitelist
+    :whitelist_globals,
+    :whitelist_unused
     :report_params
   }
   report_on_scope scope, opts, inspections
@@ -449,14 +455,15 @@ load_config = (config_file, file) ->
   chunk = assert loader(config_file)
   config = chunk! or {}
   opts = { }
-  if config.whitelist_globals
-    wl = {}
-    for k, v in pairs config.whitelist_globals
-      if file\find(k)
-        for token in *v
-          append wl, token
+  for list in *{'whitelist_globals', 'whitelist_unused'}
+    if config[list]
+      wl = {}
+      for k, v in pairs config[list]
+        if file\find(k)
+          for token in *v
+            append wl, token
 
-    opts.global_whitelist = wl
+      opts[list] = wl
 
   opts
 

@@ -1,3 +1,6 @@
+-- Copyright 2016 Nils Nordman <nino@nordman.org>
+-- License: MIT (see LICENSE.md at the top-level directory of the distribution)
+
 base = require 'moonscript.base'
 moonpick = base.loadfile('src/moonpick.moon')!
 
@@ -123,9 +126,9 @@ describe 'moonpick', ->
       res = lint code, {}
       assert.same {}, res
 
-    it 'respects a given declared_whitelist', ->
+    it 'respects a given unused_whitelist', ->
       code = clean 'x = 1'
-      res = lint code, { declared_whitelist: {'x'} }
+      res = lint code, { whitelist_unused: {'x'} }
       assert.same {}, res
 
     it 'does not complain about @variables in methods', ->
