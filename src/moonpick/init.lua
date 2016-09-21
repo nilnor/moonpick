@@ -544,7 +544,7 @@ lint_file = function(file, opts)
   local code = fh:read('*a')
   fh:close()
   local config_file = opts.lint_config or config.config_for(file)
-  opts = config_file and config.load_config(config_file, file) or { }
+  opts = config_file and config.load_config_from(config_file, file) or { }
   opts.file = file
   return lint(code, opts)
 end

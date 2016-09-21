@@ -365,7 +365,7 @@ lint_file = (file, opts = {}) ->
   code = fh\read '*a'
   fh\close!
   config_file = opts.lint_config or config.config_for(file)
-  opts = config_file and config.load_config(config_file, file) or {}
+  opts = config_file and config.load_config_from(config_file, file) or {}
   opts.file = file
   lint code, opts
 

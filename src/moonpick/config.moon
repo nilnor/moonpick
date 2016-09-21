@@ -58,7 +58,7 @@ config_for = (path) ->
   has_moonscript = pcall require, 'moonscript'
   look_for = { 'lint_config.lua' }
   if has_moonscript
-    look_for[#look_for + 1] = 'lint_config.moon'
+    table.insert look_for, 1, 'lint_config.moon'
 
   exists = (f) ->
     fh = io.open f, 'r'
@@ -78,13 +78,15 @@ config_for = (path) ->
 
   nil
 
-load_config = (config_file, file) ->
-  loader = loadfile
-  if config_file\match('.moon$')
-    loader = require("moonscript.base").loadfile
+load_config_from = (config, file) ->
+  if type(config) == 'string' -- assume path to config
+    loader = loadfile
+    if config\match('.moon$')
+      loader = require("moonscript.base").loadfile
 
-  chunk = assert loader(config_file)
-  config = chunk! or {}
+    chunk = assert loader(config)
+    config = chunk! or {}
+
   opts = { }
   for list in *{'whitelist_globals', 'whitelist_unused'}
     if config[list]
@@ -119,6 +121,9 @@ instantiate = (opts) ->
     :whitelist_globals,
     :whitelist_unused
     :report_params
+
+    allow_unused_param: (p) ->
+      not report_params or whitelist_unused[p]
   }
 
-:config_for, :load_config, :instantiate
+:config_for, :load_config_from, :instantiate

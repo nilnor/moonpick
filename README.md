@@ -24,3 +24,8 @@ code sample that illustrates the incorrect behaviour.
 
 Moonpick is released under the MIT license (see the LICENSE file for the full
 details).
+
+## Running the specs
+
+Tests require `busted` to run, as well as the `pl` module (Penlight - `luarock
+install penlight`).

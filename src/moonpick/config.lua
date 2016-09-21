@@ -54,7 +54,7 @@ config_for = function(path)
     'lint_config.lua'
   }
   if has_moonscript then
-    look_for[#look_for + 1] = 'lint_config.moon'
+    table.insert(look_for, 1, 'lint_config.moon')
   end
   local exists
   exists = function(f)
@@ -78,14 +78,16 @@ config_for = function(path)
   end
   return nil
 end
-local load_config
-load_config = function(config_file, file)
-  local loader = loadfile
-  if config_file:match('.moon$') then
-    loader = require("moonscript.base").loadfile
+local load_config_from
+load_config_from = function(config, file)
+  if type(config) == 'string' then
+    local loader = loadfile
+    if config:match('.moon$') then
+      loader = require("moonscript.base").loadfile
+    end
+    local chunk = assert(loader(config))
+    config = chunk() or { }
   end
-  local chunk = assert(loader(config_file))
-  local config = chunk() or { }
   local opts = { }
   local _list_0 = {
     'whitelist_globals',
@@ -169,11 +171,14 @@ instantiate = function(opts)
   return {
     whitelist_globals = whitelist_globals,
     whitelist_unused = whitelist_unused,
-    report_params = report_params
+    report_params = report_params,
+    allow_unused_param = function(p)
+      return not report_params or whitelist_unused[p]
+    end
   }
 end
 return {
   config_for = config_for,
-  load_config = load_config,
+  load_config_from = load_config_from,
   instantiate = instantiate
 }
