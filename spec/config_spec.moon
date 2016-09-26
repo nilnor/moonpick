@@ -62,8 +62,9 @@ describe 'config', ->
         }
       }
       assert.same {
-        whitelist_globals: sorted { 'bar', 'foo' }
-      }, config.load_config_from(cfg, '/test/foo.moon')
+        'bar',
+        'foo'
+      }, sorted config.load_config_from(cfg, '/test/foo.moon').whitelist_globals
 
     it 'loads <config> as a file when passed as a string', ->
       path = os.tmpname!
