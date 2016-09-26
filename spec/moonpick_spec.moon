@@ -125,9 +125,14 @@ describe 'moonpick', ->
       res = lint code, {}
       assert.same {}, res
 
-    it 'respects a given unused_whitelist', ->
-      code = clean 'x = 1'
-      res = lint code, { whitelist_unused: {'x'} }
+    it 'respects a given whitelist_params', ->
+      code = clean '(x) -> 1'
+      res = lint code, { whitelist_params: {'x'} }
+      assert.same {}, res
+
+    it 'respects a given whitelist_loop_variables', ->
+      code = clean 'for x in *{1,2}\n  _G.other = 1'
+      res = lint code, { whitelist_loop_variables: {'x'} }
       assert.same {}, res
 
     it 'does not complain about @variables in methods', ->
