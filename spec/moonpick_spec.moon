@@ -395,7 +395,9 @@ describe 'moonpick', ->
           [ { a, b } for a, b in pairs {} ]
       ]]
       res = lint code
-      assert.same {}, res
+      assert.same {
+        {line: 1, msg: 'declared but unused - `a`'}
+      }, res
 
     it 'handles non-prefixed member access', ->
       code = clean [[

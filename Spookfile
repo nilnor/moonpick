@@ -9,11 +9,11 @@ watch "src", "spec", ->
   on_changed "^spec/(.*)_spec%.moon", (a) ->
     spec "spec/#{a}_spec.moon"
 
-  on_changed "^src/(.+)%.moon", (base) ->
+  on_changed "^src/moonpick/(.+)%.moon", (base) ->
     spec_file = "spec/#{base}_spec.moon"
     spec_file = "spec/moonpick_spec.moon" unless is_file(spec_file)
 
-    compile("src/#{base}.moon") +
+    compile("src/moonpick/#{base}.moon") +
     spec(spec_file)
 
 notifier "#{os.getenv('HOME')}/.spook/notifiers"

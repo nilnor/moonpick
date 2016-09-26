@@ -202,6 +202,9 @@ local handlers = {
           pos = node[-1],
           type = 'param'
         })
+        scope:add_ref(def[2], {
+          pos = node[-1]
+        })
         if p[2] then
           walk({
             p[2]
@@ -222,7 +225,7 @@ local handlers = {
     end
     scope:add_declaration(var, {
       pos = node[-1],
-      type = 'for-var'
+      type = 'loop-var'
     })
     walk(args, scope)
     if body then
@@ -243,7 +246,7 @@ local handlers = {
       if type(name) == 'string' then
         scope:add_declaration(name, {
           pos = node[-1],
-          type = 'for-each-var'
+          type = 'loop-var'
         })
       end
     end
@@ -429,19 +432,14 @@ walk = function(tree, scope)
   end
 end
 local report_on_scope
-report_on_scope = function(scope, opts, inspections)
-  if opts == nil then
-    opts = { }
-  end
+report_on_scope = function(scope, evaluator, inspections)
   if inspections == nil then
     inspections = { }
   end
-  local whitelist_unused, whitelist_globals
-  whitelist_unused, whitelist_globals = opts.whitelist_unused, opts.whitelist_globals
   for name, decl in pairs(scope.declared) do
     local _continue_0 = false
     repeat
-      if scope.used[name] or whitelist_unused[name] then
+      if scope.used[name] then
         _continue_0 = true
         break
       end
@@ -449,9 +447,21 @@ report_on_scope = function(scope, opts, inspections)
         _continue_0 = true
         break
       end
-      if decl.type == 'param' and not opts.report_params then
-        _continue_0 = true
-        break
+      if decl.type == 'param' then
+        if evaluator.allow_unused_param(name) then
+          _continue_0 = true
+          break
+        end
+      elseif decl.type == 'loop-var' then
+        if evaluator.allow_unused_loop_variable(name) then
+          _continue_0 = true
+          break
+        end
+      else
+        if evaluator.allow_unused(name) then
+          _continue_0 = true
+          break
+        end
       end
       append(inspections, {
         msg = "declared but unused - `" .. tostring(name) .. "`",
@@ -466,7 +476,7 @@ report_on_scope = function(scope, opts, inspections)
   for name, node in pairs(scope.used) do
     local _continue_0 = false
     repeat
-      if not (scope.declared[name] or whitelist_globals[name]) then
+      if not (scope.declared[name] or evaluator.allow_global_access(name)) then
         if name == 'self' or name == 'super' then
           if scope.type == 'method' or scope:has_parent('method') then
             _continue_0 = true
@@ -486,8 +496,8 @@ report_on_scope = function(scope, opts, inspections)
   end
   local _list_0 = scope.scopes
   for _index_0 = 1, #_list_0 do
-    scope = _list_0[_index_0]
-    report_on_scope(scope, opts, inspections)
+    local scope = _list_0[_index_0]
+    report_on_scope(scope, evaluator, inspections)
   end
   return inspections
 end
@@ -509,8 +519,8 @@ report = function(scope, code, opts)
     opts = { }
   end
   local inspections = { }
-  local cfg = config.instantiate(opts)
-  report_on_scope(scope, cfg, inspections)
+  local evaluator = config.evaluator(opts)
+  report_on_scope(scope, evaluator, inspections)
   for _index_0 = 1, #inspections do
     local inspection = inspections[_index_0]
     local line = pos_to_line(code, inspection.pos)
@@ -530,6 +540,9 @@ lint = function(code, opts)
   local tree, err = parse.string(code)
   if not (tree) then
     return nil, err
+  end
+  if opts.print_tree then
+    require('moon').p(tree)
   end
   local scope = Scope(tree)
   walk(tree, scope)

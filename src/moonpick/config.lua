@@ -110,75 +110,91 @@ load_config_from = function(config, file)
   end
   return opts
 end
-local instantiate
-instantiate = function(opts)
-  local whitelist_unused = builtin_whitelist_unused
-  if opts.whitelist_unused then
-    do
-      local _accum_0 = { }
-      local _len_0 = 1
-      for _index_0 = 1, #whitelist_unused do
-        local t = whitelist_unused[_index_0]
-        _accum_0[_len_0] = t
-        _len_0 = _len_0 + 1
-      end
-      whitelist_unused = _accum_0
+local whitelist
+whitelist = function(...)
+  local lists = {
+    ...
+  }
+  if not (#lists > 0) then
+    return function()
+      return false
     end
-    local _list_0 = opts.whitelist_unused
-    for _index_0 = 1, #_list_0 do
-      local t = _list_0[_index_0]
-      append(whitelist_unused, t)
+  end
+  local wl = { }
+  local patterns = { }
+  for _index_0 = 1, #lists do
+    local list = lists[_index_0]
+    for _index_1 = 1, #list do
+      local p = list[_index_1]
+      if p:match('^%w+$') then
+        append(wl, p)
+      else
+        append(patterns, p)
+      end
     end
   end
   do
     local _tbl_0 = { }
-    for _index_0 = 1, #whitelist_unused do
-      local k = whitelist_unused[_index_0]
+    for _index_0 = 1, #wl do
+      local k = wl[_index_0]
       _tbl_0[k] = true
     end
-    whitelist_unused = _tbl_0
+    wl = _tbl_0
   end
-  local whitelist_globals = builtin_whitelist_globals
-  if opts.whitelist_globals then
-    do
-      local _accum_0 = { }
-      local _len_0 = 1
-      for _index_0 = 1, #whitelist_globals do
-        local t = whitelist_globals[_index_0]
-        _accum_0[_len_0] = t
-        _len_0 = _len_0 + 1
+  return function(sym)
+    if wl[sym] then
+      return true
+    end
+    for _index_0 = 1, #patterns do
+      local p = patterns[_index_0]
+      if sym:match(p) then
+        return true
       end
-      whitelist_globals = _accum_0
     end
-    local _list_0 = opts.whitelist_globals
-    for _index_0 = 1, #_list_0 do
-      local t = _list_0[_index_0]
-      append(whitelist_globals, t)
-    end
+    return false
   end
-  do
-    local _tbl_0 = { }
-    for _index_0 = 1, #whitelist_globals do
-      local k = whitelist_globals[_index_0]
-      _tbl_0[k] = true
-    end
-    whitelist_globals = _tbl_0
+end
+local evaluator
+evaluator = function(opts)
+  if opts == nil then
+    opts = { }
   end
   local report_params = opts.report_params
   if report_params == nil then
-    report_params = false
+    report_params = true
   end
+  local whitelist_params = whitelist(opts.whitelist_params or {
+    '^_',
+    '%.%.%.'
+  })
+  local report_loop_variables = opts.report_loop_variables
+  if report_loop_variables == nil then
+    report_loop_variables = true
+  end
+  local whitelist_loop_variables = whitelist(opts.whitelist_loop_variables or {
+    '^_'
+  })
+  local whitelist_global_access = whitelist(builtin_whitelist_globals, opts.whitelist_globals)
+  local whitelist_unused = whitelist({
+    '_'
+  })
   return {
-    whitelist_globals = whitelist_globals,
-    whitelist_unused = whitelist_unused,
-    report_params = report_params,
+    allow_global_access = function(p)
+      return whitelist_global_access(p)
+    end,
     allow_unused_param = function(p)
-      return not report_params or whitelist_unused[p]
+      return not report_params or whitelist_params(p)
+    end,
+    allow_unused_loop_variable = function(p)
+      return not report_loop_variables or whitelist_loop_variables(p)
+    end,
+    allow_unused = function(p)
+      return whitelist_unused(p)
     end
   }
 end
 return {
   config_for = config_for,
   load_config_from = load_config_from,
-  instantiate = instantiate
+  evaluator = evaluator
 }

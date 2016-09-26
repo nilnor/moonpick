@@ -142,6 +142,7 @@ handlers = {
           walk {p[2]}, scope
       elseif type(def) == 'table' and def[1] == 'self'
         scope\add_declaration def[2], pos: node[-1], type: 'param'
+        scope\add_ref def[2], pos: node[-1]
         if p[2] -- default parameter assignment
           walk {p[2]}, scope
       else
@@ -155,7 +156,7 @@ handlers = {
     unless scope.is_wrapper
       scope = scope\open_scope node, 'for'
 
-    scope\add_declaration var, pos: node[-1], type: 'for-var'
+    scope\add_declaration var, pos: node[-1], type: 'loop-var'
 
     walk args, scope
     walk body, scope if body
@@ -172,7 +173,7 @@ handlers = {
 
     for name in *vars
       if type(name) == 'string'
-        scope\add_declaration name, pos: node[-1], type: 'for-each-var'
+        scope\add_declaration name, pos: node[-1], type: 'loop-var'
 
     walk args, scope if args
     walk body, scope
@@ -298,16 +299,19 @@ walk = (tree, scope) ->
         if type(sub_node) == 'table'
           walk { sub_node }, scope
 
-report_on_scope = (scope, opts = {}, inspections = {}) ->
-  {:whitelist_unused, :whitelist_globals} = opts
+report_on_scope = (scope, evaluator, inspections = {}) ->
 
   for name, decl in pairs scope.declared
-    continue if scope.used[name] or whitelist_unused[name]
+    continue if scope.used[name]
     if decl.is_exported or scope.exported_from and scope.exported_from < decl.pos
       continue
 
-    if decl.type == 'param' and not opts.report_params
-      continue
+    if decl.type == 'param'
+      continue if evaluator.allow_unused_param(name)
+    elseif decl.type == 'loop-var'
+      continue if evaluator.allow_unused_loop_variable(name)
+    else
+      continue if evaluator.allow_unused(name)
 
     append inspections, {
       msg: "declared but unused - `#{name}`"
@@ -315,7 +319,7 @@ report_on_scope = (scope, opts = {}, inspections = {}) ->
     }
 
   for name, node in pairs scope.used
-    unless scope.declared[name] or whitelist_globals[name]
+    unless scope.declared[name] or evaluator.allow_global_access(name)
       if name == 'self' or name == 'super'
         if scope.type == 'method' or scope\has_parent('method')
           continue
@@ -326,7 +330,7 @@ report_on_scope = (scope, opts = {}, inspections = {}) ->
       }
 
   for scope in *scope.scopes
-    report_on_scope scope, opts, inspections
+    report_on_scope scope, evaluator, inspections
 
   inspections
 
@@ -342,8 +346,8 @@ format_inspections = (inspections) ->
 
 report = (scope, code, opts = {}) ->
   inspections = {}
-  cfg = config.instantiate opts
-  report_on_scope scope, cfg, inspections
+  evaluator = config.evaluator opts
+  report_on_scope scope, evaluator, inspections
 
   for inspection in *inspections
     line = pos_to_line(code, inspection.pos)
@@ -356,6 +360,7 @@ report = (scope, code, opts = {}) ->
 lint = (code, opts = {}) ->
   tree, err = parse.string code
   return nil, err unless tree
+  require('moon').p(tree) if opts.print_tree
   scope = Scope tree
   walk tree, scope
   report scope, code, opts

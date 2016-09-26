@@ -78,9 +78,65 @@ describe 'config', ->
         whitelist_globals: { 'bar' }
       }, config.load_config_from(path, '/test/foo.moon')
 
+  describe 'evaluator(config)', ->
+    evaluator = config.evaluator
 
+    describe 'allow_unused_param(p)', ->
+      it 'generally returns false', ->
+        assert.is_false evaluator({}).allow_unused_param('foo')
 
+      it 'returns true if config.report_params is false', ->
+        assert.is_true evaluator(report_params: false).allow_unused_param('foo')
 
+      it 'returns true if config.whitelist_params contains <p>', ->
+        whitelist_params = {'foo'}
+        assert.is_true evaluator(:whitelist_params).allow_unused_param('foo')
+
+      it 'supports patterns', ->
+        whitelist_params = {'^a+'}
+        assert.is_true evaluator(:whitelist_params).allow_unused_param('aardwark')
+
+      it 'defaults to white listings params starting with an underscore', ->
+        for sym in *{'_', '_foo', '_bar2'}
+          assert.is_true evaluator().allow_unused_param(sym)
+
+    describe 'allow_unused_loop_variable(p)', ->
+      it 'generally returns false', ->
+        assert.is_false evaluator({}).allow_unused_loop_variable('foo')
+
+      it 'returns true if config.report_loop_variables is false', ->
+        assert.is_true evaluator(report_loop_variables: false).allow_unused_loop_variable('foo')
+
+      it 'returns true if config.whitelist_loop_variables contains <p>', ->
+        whitelist_loop_variables = {'foo'}
+        assert.is_true evaluator(:whitelist_loop_variables).allow_unused_loop_variable('foo')
+
+      it 'supports patterns', ->
+        whitelist_loop_variables = {'^a+'}
+        assert.is_true evaluator(:whitelist_loop_variables).allow_unused_loop_variable('aardwark')
+
+      it 'defaults to white listings params starting with an underscore', ->
+        for sym in *{'_', '_foo', '_bar2'}
+          assert.is_true evaluator().allow_unused_loop_variable(sym)
+
+    describe 'allow_global_access(p)', ->
+      it 'generally returns false', ->
+        assert.is_false evaluator({}).allow_global_access('foo')
+
+      it 'returns true if config.whitelist_globals contains <p>', ->
+        whitelist_globals = {'foo'}
+        assert.is_true evaluator(:whitelist_globals).allow_global_access('foo')
+
+      it 'supports patterns', ->
+        whitelist_globals = {'^a+'}
+        assert.is_true evaluator(:whitelist_globals).allow_global_access('aardwark')
+
+      it 'always includes whitelisting of builtins', ->
+        for sym in *{'require', '_G', 'tostring'}
+          assert.is_true evaluator().allow_global_access(sym)
+
+        whitelist_globals = {'foo'}
+        assert.is_true evaluator(:whitelist_globals).allow_global_access('table')
 
 
 

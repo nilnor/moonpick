@@ -100,30 +100,59 @@ load_config_from = (config, file) ->
 
   opts
 
-instantiate = (opts) ->
-  whitelist_unused = builtin_whitelist_unused
-  if opts.whitelist_unused
-    whitelist_unused = [t for t in *whitelist_unused]
-    append(whitelist_unused, t) for t in *opts.whitelist_unused
+whitelist = (...) ->
+  lists = {...}
+  unless #lists > 0
+    return -> false
 
-  whitelist_unused = {k, true for k in *whitelist_unused}
+  wl = {}
+  patterns = {}
 
-  whitelist_globals = builtin_whitelist_globals
-  if opts.whitelist_globals
-    whitelist_globals = [t for t in *whitelist_globals]
-    append(whitelist_globals, t) for t in *opts.whitelist_globals
+  for list in *lists
+    for p in *list
+      if p\match '^%w+$'
+        append wl, p
+      else
+        append patterns, p
 
-  whitelist_globals = {k, true for k in *whitelist_globals}
+  wl = {k, true for k in *wl}
+
+  (sym) ->
+    if wl[sym]
+      return true
+
+    for p in *patterns
+      if sym\match(p)
+        return true
+
+    false
+
+evaluator = (opts = {}) ->
   report_params = opts.report_params
-  report_params = false if report_params == nil
-
-  {
-    :whitelist_globals,
-    :whitelist_unused
-    :report_params
-
-    allow_unused_param: (p) ->
-      not report_params or whitelist_unused[p]
+  report_params = true if report_params == nil
+  whitelist_params = whitelist opts.whitelist_params or {
+    '^_',
+    '%.%.%.'
   }
 
-:config_for, :load_config_from, :instantiate
+  report_loop_variables = opts.report_loop_variables
+  report_loop_variables = true if report_loop_variables == nil
+  whitelist_loop_variables = whitelist opts.whitelist_loop_variables or {'^_'}
+  whitelist_global_access = whitelist builtin_whitelist_globals, opts.whitelist_globals
+  whitelist_unused = whitelist {'_'}
+
+  {
+    allow_global_access: (p) ->
+      whitelist_global_access(p)
+
+    allow_unused_param: (p) ->
+      not report_params or whitelist_params(p)
+
+    allow_unused_loop_variable: (p) ->
+      not report_loop_variables or whitelist_loop_variables(p)
+
+    allow_unused: (p) ->
+      whitelist_unused(p)
+  }
+
+:config_for, :load_config_from, :evaluator
