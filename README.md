@@ -21,11 +21,13 @@ Moonpick can be installed via [Luarocks](https://luarocks.org/):
 $ luarocks install moonpick
 ```
 
-Run moonpick from command line:
+It can then be run from command line:
 
 ```shell
 $ moonpick <path-to-file>
 ```
+
+The output closely mimics the output of Moonscript's built-in linter.
 
 It's also easily bundled into a standalone application as it's sole dependency
 is moonscript. See the [API](#API) section for more information on how to run
@@ -109,6 +111,82 @@ See the below example (lint_config.moon, using Moonscript syntax):
 
 A whitelist item is treated as a pattern if it consist of anything other than
 alphanumeric characters.
+
+## API
+
+### moonpick
+
+```lua
+local moonpick = require('moonpick')
+```
+
+#### lint(code, config = {})
+
+Lints the given code in `code`, returning a table of linting inspections.
+`config` is the linting configuration to use for the file, and can contain flat
+versions of the elements typically found in a configuration file
+(`whitelist_globals`, `whitelist_params`, `whitelist_loop_variables`,
+`report_params`, `report_loop_variables`).
+
+Example of a configuration table (Lua syntax):
+
+```lua
+local moonpick = require('moonpick')
+local code = 'a = 2'
+moonpick.lint(code, {
+  whitelist_globals = { 'foo', 'bar', }
+  whitelist_params = { '^_+', 'other_+'}
+})
+```
+
+The returned inspections table would look like this for the above example:
+
+```lua
+{
+  {
+    line = 1,
+    pos = 1,
+    msg = 'declared but unused - `a`',
+    code = 'a = 2'
+  }
+}
+
+```
+
+#### lint_file(file, opts = {})
+
+Lints the given `file`, returning a table of linting inspections. `opts` can
+currently contain one value, `lint_config`, which specifies the configuration
+file to load configuration from.
+
+### moonpick.config
+
+```lua
+local moonpick_config = require('moonpick.config')
+```
+
+#### config_for(path)
+
+Returns the path of relevant configuration file for `path`, or `nil` if none was found.
+
+#### load_config_from(config_path, file)
+
+Loads linting configuration for the file `file` from the configuration file
+given by `config_path`. The returned configuration will be a table flattened
+configuration options for `file`.
+
+#### evaluator(config)
+
+Returns an evaluator instance for the given linting options (e.g. as returned by
+`load_config_from`). The evaluator instance provides the following four
+functions (note that these are functions, to be invoked using the ordinary dot
+operator `.`):
+
+`allow_global_access`, `allow_unused_param`, `allow_unused_loop_variable`,
+`allow_unused`.
+
+All of these take as their first argument a symbol (as string) and returns
+`true` or `false` depending on whether the symbol passes linting or not.
 
 ## Current status
 
