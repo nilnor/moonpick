@@ -59,16 +59,24 @@ config_for = function(path)
     end
     return false
   end
-  path = path:match('(.+)[/\\].+$') or path
-  while path do
+  local dir = path:match('(.+)[/\\].+$') or path
+  while dir do
     for _index_0 = 1, #look_for do
       local name = look_for[_index_0]
-      local config = tostring(path) .. "/" .. tostring(name)
+      local config = tostring(dir) .. "/" .. tostring(name)
       if exists(config) then
         return config
       end
     end
-    path = path:match('(.+)[/\\].+$')
+    dir = dir:match('(.+)[/\\].+$')
+  end
+  if not (path:match('^/')) then
+    for _index_0 = 1, #look_for do
+      local name = look_for[_index_0]
+      if exists(name) then
+        return name
+      end
+    end
   end
   return nil
 end

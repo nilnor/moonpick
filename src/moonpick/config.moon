@@ -61,13 +61,17 @@ config_for = (path) ->
 
     false
 
-  path = path\match('(.+)[/\\].+$') or path
-  while path
+  dir = path\match('(.+)[/\\].+$') or path
+  while dir
     for name in *look_for
-      config = "#{path}/#{name}"
+      config = "#{dir}/#{name}"
       return config if exists(config)
 
-    path = path\match('(.+)[/\\].+$')
+    dir = dir\match('(.+)[/\\].+$')
+
+  unless path\match('^/')
+    for name in *look_for
+      return name if exists(name)
 
   nil
 
