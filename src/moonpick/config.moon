@@ -3,13 +3,6 @@
 
 append = table.insert
 
-builtin_whitelist_unused = {
-  '_G',
-  '...',
-  '_',
-  'tostring' -- due to string interpolations
-}
-
 builtin_whitelist_globals = {
   '_G'
   '_VERSION'
@@ -87,8 +80,15 @@ load_config_from = (config, file) ->
     chunk = assert loader(config)
     config = chunk! or {}
 
-  opts = { }
-  for list in *{'whitelist_globals', 'whitelist_unused'}
+  opts = {
+    report_loop_variables: config.report_loop_variables,
+    report_params: config.report_params
+  }
+  for list in *{
+    'whitelist_globals',
+    'whitelist_loop_variables',
+    'whitelist_params'
+  }
     if config[list]
       wl = {}
       for k, v in pairs config[list]
@@ -137,7 +137,11 @@ evaluator = (opts = {}) ->
 
   report_loop_variables = opts.report_loop_variables
   report_loop_variables = true if report_loop_variables == nil
-  whitelist_loop_variables = whitelist opts.whitelist_loop_variables or {'^_'}
+  whitelist_loop_variables = whitelist opts.whitelist_loop_variables or {
+    '^_',
+    'i',
+    'j'
+  }
   whitelist_global_access = whitelist builtin_whitelist_globals, opts.whitelist_globals
   whitelist_unused = whitelist {'_'}
 

@@ -55,16 +55,32 @@ describe 'config', ->
 
     it 'loads the relevant settings for <file> from <config>', ->
       cfg = {
+        report_loop_variables: true
+        report_params: false
+
         whitelist_globals: {
-          ["."]: { 'foo' },
+          ['.']: { 'foo' },
           test: { 'bar' }
           other: { 'zed' }
         }
+        whitelist_loop_variables: {
+          test: {'k'}
+        }
+        whitelist_params: {
+          ['.']: {'pipe'}
+        }
       }
+      loaded = config.load_config_from(cfg, '/test/foo.moon')
       assert.same {
         'bar',
         'foo'
-      }, sorted config.load_config_from(cfg, '/test/foo.moon').whitelist_globals
+      }, sorted loaded.whitelist_globals
+
+      assert.same { 'k' }, loaded.whitelist_loop_variables
+      assert.same { 'pipe' }, loaded.whitelist_params
+      assert.is_true loaded.report_loop_variables
+      assert.is_false loaded.report_params
+
 
     it 'loads <config> as a file when passed as a string', ->
       path = os.tmpname!
@@ -116,8 +132,12 @@ describe 'config', ->
         whitelist_loop_variables = {'^a+'}
         assert.is_true evaluator(:whitelist_loop_variables).allow_unused_loop_variable('aardwark')
 
-      it 'defaults to white listings params starting with an underscore', ->
+      it 'defaults to white listing params starting with an underscore', ->
         for sym in *{'_', '_foo', '_bar2'}
+          assert.is_true evaluator().allow_unused_loop_variable(sym)
+
+      it 'defaults to white listing the common names "i" and "j"', ->
+        for sym in *{'i', 'j'}
           assert.is_true evaluator().allow_unused_loop_variable(sym)
 
     describe 'allow_global_access(p)', ->

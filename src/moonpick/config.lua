@@ -1,10 +1,4 @@
 local append = table.insert
-local builtin_whitelist_unused = {
-  '_G',
-  '...',
-  '_',
-  'tostring'
-}
 local builtin_whitelist_globals = {
   '_G',
   '_VERSION',
@@ -88,10 +82,14 @@ load_config_from = function(config, file)
     local chunk = assert(loader(config))
     config = chunk() or { }
   end
-  local opts = { }
+  local opts = {
+    report_loop_variables = config.report_loop_variables,
+    report_params = config.report_params
+  }
   local _list_0 = {
     'whitelist_globals',
-    'whitelist_unused'
+    'whitelist_loop_variables',
+    'whitelist_params'
   }
   for _index_0 = 1, #_list_0 do
     local list = _list_0[_index_0]
@@ -172,7 +170,9 @@ evaluator = function(opts)
     report_loop_variables = true
   end
   local whitelist_loop_variables = whitelist(opts.whitelist_loop_variables or {
-    '^_'
+    '^_',
+    'i',
+    'j'
   })
   local whitelist_global_access = whitelist(builtin_whitelist_globals, opts.whitelist_globals)
   local whitelist_unused = whitelist({
