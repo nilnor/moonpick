@@ -149,8 +149,9 @@ evaluator = (opts = {}) ->
   }
   whitelist_global_access = whitelist builtin_whitelist_globals, opts.whitelist_globals
   whitelist_unused = whitelist {
-    '_',
-    'tostring'
+    '^_$',
+    'tostring',
+    '_ENV'
   }
 
   {

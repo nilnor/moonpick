@@ -185,8 +185,9 @@ evaluator = function(opts)
   })
   local whitelist_global_access = whitelist(builtin_whitelist_globals, opts.whitelist_globals)
   local whitelist_unused = whitelist({
-    '_',
-    'tostring'
+    '^_$',
+    'tostring',
+    '_ENV'
   })
   return {
     allow_global_access = function(p)
