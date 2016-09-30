@@ -399,7 +399,7 @@ describe 'moonpick', ->
         (a) ->
           [ { a, b } for a, b in pairs {} ]
       ]]
-      res = lint code
+      res = lint code, report_params: true
       assert.same {
         {line: 1, msg: 'declared but unused - `a`'}
       }, res
