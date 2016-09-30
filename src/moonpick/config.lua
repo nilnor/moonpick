@@ -97,7 +97,8 @@ load_config_from = function(config, file)
   local _list_0 = {
     'whitelist_globals',
     'whitelist_loop_variables',
-    'whitelist_params'
+    'whitelist_params',
+    'whitelist_unused'
   }
   for _index_0 = 1, #_list_0 do
     local list = _list_0[_index_0]
@@ -184,7 +185,8 @@ evaluator = function(opts)
   })
   local whitelist_global_access = whitelist(builtin_whitelist_globals, opts.whitelist_globals)
   local whitelist_unused = whitelist({
-    '_'
+    '_',
+    'tostring'
   })
   return {
     allow_global_access = function(p)

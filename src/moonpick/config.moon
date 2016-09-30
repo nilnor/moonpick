@@ -91,7 +91,8 @@ load_config_from = (config, file) ->
   for list in *{
     'whitelist_globals',
     'whitelist_loop_variables',
-    'whitelist_params'
+    'whitelist_params',
+    'whitelist_unused'
   }
     if config[list]
       wl = {}
@@ -147,7 +148,10 @@ evaluator = (opts = {}) ->
     'j'
   }
   whitelist_global_access = whitelist builtin_whitelist_globals, opts.whitelist_globals
-  whitelist_unused = whitelist {'_'}
+  whitelist_unused = whitelist {
+    '_',
+    'tostring'
+  }
 
   {
     allow_global_access: (p) ->

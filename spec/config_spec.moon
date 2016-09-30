@@ -69,6 +69,9 @@ describe 'config', ->
         whitelist_params: {
           ['.']: {'pipe'}
         }
+        whitelist_unused: {
+          ['.']: {'general'}
+        }
       }
       loaded = config.load_config_from(cfg, '/test/foo.moon')
       assert.same {
@@ -78,6 +81,7 @@ describe 'config', ->
 
       assert.same { 'k' }, loaded.whitelist_loop_variables
       assert.same { 'pipe' }, loaded.whitelist_params
+      assert.same { 'general' }, loaded.whitelist_unused
       assert.is_true loaded.report_loop_variables
       assert.is_false loaded.report_params
 

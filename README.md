@@ -101,6 +101,11 @@ See the below example (lint_config.moon, using Moonscript syntax):
     ["."]: { 'i', 'j', 'k', '^_' },
   }
 
+  -- general whitelist for unused variables if desired for
+  -- some reason
+  whitelist_unused: {
+    ["."]: {},
+  }
   -- loop variable and function parameter linting can be disabled
   -- completely by uncommenting the below
 
@@ -126,7 +131,7 @@ Lints the given code in `code`, returning a table of linting inspections.
 `config` is the linting configuration to use for the file, and can contain flat
 versions of the elements typically found in a configuration file
 (`whitelist_globals`, `whitelist_params`, `whitelist_loop_variables`,
-`report_params`, `report_loop_variables`).
+`whitelist_unused`, `report_params`, `report_loop_variables`).
 
 Example of a configuration table (Lua syntax):
 
