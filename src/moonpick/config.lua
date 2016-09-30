@@ -168,7 +168,7 @@ evaluator = function(opts)
   end
   local report_params = opts.report_params
   if report_params == nil then
-    report_params = true
+    report_params = false
   end
   local whitelist_params = whitelist(opts.whitelist_params or {
     '^_',

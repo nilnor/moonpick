@@ -134,7 +134,7 @@ whitelist = (...) ->
 
 evaluator = (opts = {}) ->
   report_params = opts.report_params
-  report_params = true if report_params == nil
+  report_params = false if report_params == nil
   whitelist_params = whitelist opts.whitelist_params or {
     '^_',
     '%.%.%.'

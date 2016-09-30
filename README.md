@@ -43,15 +43,15 @@ statement, table decomposition statement, etc.
 
 ### Unused function parameters
 
-Moonpick will also detect and complain about declared but unused function
-parameters. This can be disabled completely in the
-[configuration](#configuration) if desired, or a specific whitelist can be used
-to control what to allow. It ships with a default configuration that whitelists
-any parameter starting with a '_', providing a way of keeping the
-documentational aspects for a function and still pleasing the linter (e.g. a
-function might follow an external API and still wants to indicate the available
-parameters even though not all are used, in which case the argument can be
-prefixed with '_' to indicate this explicitly).
+Moonpick can also detect and complain about declared but unused function
+parameters. This is not enabled by default, as it's very common to have unused
+parameters. E.g. a function might follow an external API and still wants to
+indicate the available parameters even though not all are used. To enable this,
+set the `report_params` [configuration](#configuration) option to `true`.
+
+Moonpick ships with a default configuration that whitelists any parameter
+starting with a '_', providing a way of keeping the documentational aspects for
+a function and still pleasing the linter.
 
 ### Unused loop variables
 

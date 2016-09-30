@@ -103,11 +103,11 @@ describe 'config', ->
     evaluator = config.evaluator
 
     describe 'allow_unused_param(p)', ->
-      it 'generally returns false', ->
-        assert.is_false evaluator({}).allow_unused_param('foo')
+      it 'generally returns true', ->
+        assert.is_true evaluator({}).allow_unused_param('foo')
 
-      it 'returns true if config.report_params is false', ->
-        assert.is_true evaluator(report_params: false).allow_unused_param('foo')
+      it 'returns false if config.report_params is true', ->
+        assert.is_false evaluator(report_params: true).allow_unused_param('foo')
 
       it 'returns true if config.whitelist_params contains <p>', ->
         whitelist_params = {'foo'}
