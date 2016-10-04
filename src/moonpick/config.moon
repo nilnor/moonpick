@@ -177,7 +177,7 @@ evaluator = (opts = {}) ->
     allow_shadowing: (p) ->
       not report_shadowing or (
         whitelist_shadowing(p) or
-        builtin_whitelist_shadowing
+        builtin_whitelist_shadowing(p)
       )
   }
 

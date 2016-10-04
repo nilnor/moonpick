@@ -213,7 +213,7 @@ evaluator = function(opts)
       return whitelist_unused(p)
     end,
     allow_shadowing = function(p)
-      return not report_shadowing or (whitelist_shadowing(p) or builtin_whitelist_shadowing)
+      return not report_shadowing or (whitelist_shadowing(p) or builtin_whitelist_shadowing(p))
     end
   }
 end
