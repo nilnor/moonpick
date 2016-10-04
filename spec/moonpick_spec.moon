@@ -315,6 +315,24 @@ describe 'moonpick', ->
         {line: 1, msg: 'accessing global - `foo`'}
       }, res
 
+    it 'detected undeclared accesses for chained expressions', ->
+      code = 'foo.x'
+      res = lint code, {}
+      assert.same {
+        {line: 1, msg: 'accessing global - `foo`'}
+      }, res
+
+    it 'reports each undeclared usage separately', ->
+      code = clean [[
+        x 1
+        x 2
+      ]]
+      res = lint code, {}
+      assert.same {
+        {line: 1, msg: 'accessing global - `x`'}
+        {line: 2, msg: 'accessing global - `x`'}
+      }, res
+
     it 'includes built-ins in the global whitelist', ->
       code = clean [[
         x = tostring(_G.foo)

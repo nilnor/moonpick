@@ -7,6 +7,14 @@ config = require "moonpick.config"
 
 append = table.insert
 
+add = (map, key, val) ->
+  list = map[key]
+  unless list
+    list = {}
+    map[key] = list
+
+  append list, val
+
 Scope = (node, parent) ->
   assert node, "Missing node"
   declared = {}
@@ -38,22 +46,22 @@ Scope = (node, parent) ->
 
     add_declaration: (name, opts) =>
       if parent and parent\has_declared(name)
-        shadowing_decls[name] = opts
+        add shadowing_decls, name, opts
 
-      declared[name] = opts
+      add declared, name, opts
 
     add_assignment: (name, ass) =>
       return if @has_declared name
       if not parent or not parent\has_declared(name)
-        declared[name] = ass
+        add declared, name, ass
 
     add_ref: (name, ref) =>
       if declared[name]
-        used[name] = ref
+        add used, name, ref
       else if parent and parent\has_declared(name)
         parent\add_ref name, ref
       else
-        used[name] = ref
+        add used, name, ref
 
     open_scope: (sub_node, type) =>
       scope = Scope sub_node, @
@@ -319,43 +327,46 @@ walk = (tree, scope) ->
 report_on_scope = (scope, evaluator, inspections = {}) ->
 
   -- Declared but unused variables
-  for name, decl in pairs scope.declared
-
+  for name, decls in pairs scope.declared
     continue if scope.used[name]
-    if decl.is_exported or scope.exported_from and scope.exported_from < decl.pos
-      continue
 
-    if decl.type == 'param'
-      continue if evaluator.allow_unused_param(name)
-    elseif decl.type == 'loop-var'
-      continue if evaluator.allow_unused_loop_variable(name)
-    else
-      continue if evaluator.allow_unused(name)
+    for decl in *decls
+      if decl.is_exported or scope.exported_from and scope.exported_from < decl.pos
+        continue
 
-    append inspections, {
-      msg: "declared but unused - `#{name}`"
-      pos: decl.pos or scope.pos,
-    }
+      if decl.type == 'param'
+        continue if evaluator.allow_unused_param(name)
+      elseif decl.type == 'loop-var'
+        continue if evaluator.allow_unused_loop_variable(name)
+      else
+        continue if evaluator.allow_unused(name)
+
+      append inspections, {
+        msg: "declared but unused - `#{name}`"
+        pos: decl.pos or scope.pos,
+      }
 
   -- Used but undefined references
-  for name, node in pairs scope.used
+  for name, nodes in pairs scope.used
     unless scope.declared[name] or evaluator.allow_global_access(name)
       if name == 'self' or name == 'super'
         if scope.type == 'method' or scope\has_parent('method')
           continue
 
-      append inspections, {
-        msg: "accessing global - `#{name}`"
-        pos: node.pos or scope.pos,
-      }
+      for node in *nodes
+        append inspections, {
+          msg: "accessing global - `#{name}`"
+          pos: node.pos or scope.pos,
+        }
 
     -- Shadowing declarations
-  for name, node in pairs scope.shadowing_decls
+  for name, nodes in pairs scope.shadowing_decls
     unless evaluator.allow_shadowing(name)
-      append inspections, {
-        msg: "shadowing outer variable - `#{name}`"
-        pos: node.pos or scope.pos,
-      }
+      for node in *nodes
+        append inspections, {
+          msg: "shadowing outer variable - `#{name}`"
+          pos: node.pos or scope.pos,
+        }
 
   for sub_scope in *scope.scopes
     report_on_scope sub_scope, evaluator, inspections
