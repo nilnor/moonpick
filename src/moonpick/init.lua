@@ -269,6 +269,9 @@ local handlers = {
     if not (scope.is_wrapper) then
       scope = scope:open_scope(node, 'for-each')
     end
+    if args then
+      walk(args, scope)
+    end
     for _index_0 = 1, #vars do
       local name = vars[_index_0]
       if type(name) == 'string' then
@@ -277,9 +280,6 @@ local handlers = {
           type = 'loop-var'
         })
       end
-    end
-    if args then
-      walk(args, scope)
     end
     return walk(body, scope)
   end,

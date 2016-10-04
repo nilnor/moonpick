@@ -507,8 +507,8 @@ describe 'moonpick', ->
 
     it 'rvalue declaration values generally does not shadow lvalues', ->
       code = clean [[
-        x = {
-          f: (x) ->
+        x = { -- assignment lvalue target
+          f: (x) -> -- this is part of the rvalue
         }
         x
       ]]
@@ -519,6 +519,14 @@ describe 'moonpick', ->
       code = clean [[
         f = (x) -> x + f(x + 1)
         f
+      ]]
+      res = lint code, {}
+      assert.same {}, res
+
+    it 'does not complain about foreach comprehension vars shadowing target', ->
+      code = clean [[
+        for x in *[x for x in *_G.foo when x != 'bar' ]
+          x!
       ]]
       res = lint code, {}
       assert.same {}, res

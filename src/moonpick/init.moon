@@ -196,11 +196,12 @@ handlers = {
     unless scope.is_wrapper
       scope = scope\open_scope node, 'for-each'
 
+    walk args, scope if args
+
     for name in *vars
       if type(name) == 'string'
         scope\add_declaration name, pos: node[-1], type: 'loop-var'
 
-    walk args, scope if args
     walk body, scope
 
   declare_with_shadows: (node, scope, walk) ->
