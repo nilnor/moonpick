@@ -92,7 +92,8 @@ load_config_from = (config, file) ->
     'whitelist_globals',
     'whitelist_loop_variables',
     'whitelist_params',
-    'whitelist_unused'
+    'whitelist_unused',
+    'whitelist_shadowing'
   }
     if config[list]
       wl = {}
@@ -147,6 +148,12 @@ evaluator = (opts = {}) ->
     'i',
     'j'
   }
+
+  report_shadowing = opts.report_shadowing
+  report_shadowing = true if report_shadowing == nil
+  builtin_whitelist_shadowing = whitelist { '%.%.%.', '_ENV' }
+  whitelist_shadowing = whitelist(opts.whitelist_shadowing) or builtin_whitelist_shadowing
+
   whitelist_global_access = whitelist builtin_whitelist_globals, opts.whitelist_globals
   whitelist_unused = whitelist {
     '^_$',
@@ -166,6 +173,12 @@ evaluator = (opts = {}) ->
 
     allow_unused: (p) ->
       whitelist_unused(p)
+
+    allow_shadowing: (p) ->
+      not report_shadowing or (
+        whitelist_shadowing(p) or
+        builtin_whitelist_shadowing
+      )
   }
 
 :config_for, :load_config_from, :evaluator

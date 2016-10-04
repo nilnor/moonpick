@@ -72,6 +72,9 @@ describe 'config', ->
         whitelist_unused: {
           ['.']: {'general'}
         }
+        whitelist_shadowing: {
+          ['.']: {'table'}
+        }
       }
       loaded = config.load_config_from(cfg, '/test/foo.moon')
       assert.same {
@@ -82,6 +85,7 @@ describe 'config', ->
       assert.same { 'k' }, loaded.whitelist_loop_variables
       assert.same { 'pipe' }, loaded.whitelist_params
       assert.same { 'general' }, loaded.whitelist_unused
+      assert.same { 'table' }, loaded.whitelist_shadowing
       assert.is_true loaded.report_loop_variables
       assert.is_false loaded.report_params
 

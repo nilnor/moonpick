@@ -98,7 +98,8 @@ load_config_from = function(config, file)
     'whitelist_globals',
     'whitelist_loop_variables',
     'whitelist_params',
-    'whitelist_unused'
+    'whitelist_unused',
+    'whitelist_shadowing'
   }
   for _index_0 = 1, #_list_0 do
     local list = _list_0[_index_0]
@@ -183,6 +184,15 @@ evaluator = function(opts)
     'i',
     'j'
   })
+  local report_shadowing = opts.report_shadowing
+  if report_shadowing == nil then
+    report_shadowing = true
+  end
+  local builtin_whitelist_shadowing = whitelist({
+    '%.%.%.',
+    '_ENV'
+  })
+  local whitelist_shadowing = whitelist(opts.whitelist_shadowing) or builtin_whitelist_shadowing
   local whitelist_global_access = whitelist(builtin_whitelist_globals, opts.whitelist_globals)
   local whitelist_unused = whitelist({
     '^_$',
@@ -201,6 +211,9 @@ evaluator = function(opts)
     end,
     allow_unused = function(p)
       return whitelist_unused(p)
+    end,
+    allow_shadowing = function(p)
+      return not report_shadowing or (whitelist_shadowing(p) or builtin_whitelist_shadowing)
     end
   }
 end

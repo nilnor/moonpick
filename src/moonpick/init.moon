@@ -12,6 +12,7 @@ Scope = (node, parent) ->
   declared = {}
   used = {}
   scopes = {}
+  shadowing_decls = {}
   pos = node[-1]
   if not pos and parent
     pos = parent.pos
@@ -20,6 +21,7 @@ Scope = (node, parent) ->
     :parent,
     :declared,
     :used,
+    :shadowing_decls,
     :scopes,
     :node,
     :pos,
@@ -35,6 +37,9 @@ Scope = (node, parent) ->
       return parent\has_parent type
 
     add_declaration: (name, opts) =>
+      if parent and parent\has_declared(name)
+        shadowing_decls[name] = opts
+
       declared[name] = opts
 
     add_assignment: (name, ass) =>
@@ -50,8 +55,8 @@ Scope = (node, parent) ->
       else
         used[name] = ref
 
-    open_scope: (node, type) =>
-      scope = Scope node, @
+    open_scope: (sub_node, type) =>
+      scope = Scope sub_node, @
       scope.type = type
       append scopes, scope
       scope
@@ -78,6 +83,11 @@ is_loop_assignment = (list) ->
   op = c_target[1][1]
   op == 'for' or op == 'foreach'
 
+is_fndef_assignment = (list) ->
+  node = list[1]
+  return false unless type(node) == 'table'
+  node[1] == 'fndef'
+
 handlers = {
   update: (node, scope, walk) ->
     target, val = node[2], node[4]
@@ -94,6 +104,7 @@ handlers = {
 
     walk {val}, scope
 
+  -- x, y = foo!, ...
   assign: (node, scope, walk) ->
     targets = node[2]
     values = node[3]
@@ -103,6 +114,12 @@ handlers = {
       if is_loop_assignment(values)
         scope = scope\open_scope node, 'loop-assignment'
         scope.is_wrapper = true
+
+    is_fndef = is_fndef_assignment values
+
+    -- values are walked before the lvalue, except for fndefs where
+    -- the lvalue is implicitly local
+    walk values, scope unless is_fndef
 
     for t in *targets
       switch t[1] -- type of target
@@ -118,7 +135,7 @@ handlers = {
               if type(field) == 'table' and field[1] == 'ref'
                 scope\add_assignment field[2], { pos: field[-1] or pos }
 
-    walk values, scope
+    walk values, scope if is_fndef
 
   chain: (node, scope, walk) ->
     if not scope.is_wrapper and is_loop_assignment({node})
@@ -301,7 +318,9 @@ walk = (tree, scope) ->
 
 report_on_scope = (scope, evaluator, inspections = {}) ->
 
+  -- Declared but unused variables
   for name, decl in pairs scope.declared
+
     continue if scope.used[name]
     if decl.is_exported or scope.exported_from and scope.exported_from < decl.pos
       continue
@@ -318,6 +337,7 @@ report_on_scope = (scope, evaluator, inspections = {}) ->
       pos: decl.pos or scope.pos,
     }
 
+  -- Used but undefined references
   for name, node in pairs scope.used
     unless scope.declared[name] or evaluator.allow_global_access(name)
       if name == 'self' or name == 'super'
@@ -329,8 +349,16 @@ report_on_scope = (scope, evaluator, inspections = {}) ->
         pos: node.pos or scope.pos,
       }
 
-  for scope in *scope.scopes
-    report_on_scope scope, evaluator, inspections
+    -- Shadowing declarations
+  for name, node in pairs scope.shadowing_decls
+    unless evaluator.allow_shadowing(name)
+      append inspections, {
+        msg: "shadowing outer variable - `#{name}`"
+        pos: node.pos or scope.pos,
+      }
+
+  for sub_scope in *scope.scopes
+    report_on_scope sub_scope, evaluator, inspections
 
   inspections
 

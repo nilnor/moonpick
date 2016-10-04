@@ -12,6 +12,7 @@ Scope = function(node, parent)
   local declared = { }
   local used = { }
   local scopes = { }
+  local shadowing_decls = { }
   local pos = node[-1]
   if not pos and parent then
     pos = parent.pos
@@ -20,6 +21,7 @@ Scope = function(node, parent)
     parent = parent,
     declared = declared,
     used = used,
+    shadowing_decls = shadowing_decls,
     scopes = scopes,
     node = node,
     pos = pos,
@@ -40,6 +42,9 @@ Scope = function(node, parent)
       return parent:has_parent(type)
     end,
     add_declaration = function(self, name, opts)
+      if parent and parent:has_declared(name) then
+        shadowing_decls[name] = opts
+      end
       declared[name] = opts
     end,
     add_assignment = function(self, name, ass)
@@ -61,8 +66,8 @@ Scope = function(node, parent)
         end
       end
     end,
-    open_scope = function(self, node, type)
-      local scope = Scope(node, self)
+    open_scope = function(self, sub_node, type)
+      local scope = Scope(sub_node, self)
       scope.type = type
       append(scopes, scope)
       return scope
@@ -108,6 +113,14 @@ is_loop_assignment = function(list)
   local op = c_target[1][1]
   return op == 'for' or op == 'foreach'
 end
+local is_fndef_assignment
+is_fndef_assignment = function(list)
+  local node = list[1]
+  if not (type(node) == 'table') then
+    return false
+  end
+  return node[1] == 'fndef'
+end
 local handlers = {
   update = function(node, scope, walk)
     local target, val = node[2], node[4]
@@ -140,6 +153,10 @@ local handlers = {
         scope.is_wrapper = true
       end
     end
+    local is_fndef = is_fndef_assignment(values)
+    if not (is_fndef) then
+      walk(values, scope)
+    end
     for _index_0 = 1, #targets do
       local t = targets[_index_0]
       local _exp_0 = t[1]
@@ -164,7 +181,9 @@ local handlers = {
         end
       end
     end
-    return walk(values, scope)
+    if is_fndef then
+      return walk(values, scope)
+    end
   end,
   chain = function(node, scope, walk)
     if not scope.is_wrapper and is_loop_assignment({
@@ -494,10 +513,18 @@ report_on_scope = function(scope, evaluator, inspections)
       break
     end
   end
+  for name, node in pairs(scope.shadowing_decls) do
+    if not (evaluator.allow_shadowing(name)) then
+      append(inspections, {
+        msg = "shadowing outer variable - `" .. tostring(name) .. "`",
+        pos = node.pos or scope.pos
+      })
+    end
+  end
   local _list_0 = scope.scopes
   for _index_0 = 1, #_list_0 do
-    local scope = _list_0[_index_0]
-    report_on_scope(scope, evaluator, inspections)
+    local sub_scope = _list_0[_index_0]
+    report_on_scope(sub_scope, evaluator, inspections)
   end
   return inspections
 end

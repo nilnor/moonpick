@@ -394,16 +394,6 @@ describe 'moonpick', ->
       res = lint code
       assert.same {}, res
 
-    it 'handles scope shadowing correctly', ->
-      code = clean [[
-        (a) ->
-          [ { a, b } for a, b in pairs {} ]
-      ]]
-      res = lint code, report_params: true
-      assert.same {
-        {line: 1, msg: 'declared but unused - `a`'}
-      }, res
-
     it 'handles non-prefixed member access', ->
       code = clean [[
         class Foo
@@ -459,3 +449,69 @@ describe 'moonpick', ->
         =====================================
         > {bar: other} = _G.zed
       ]]), moonpick.format_inspections(inspections)
+
+  describe 'shadowing warnings', ->
+    it 'detects shadowing outer variables in for each', ->
+      code = clean [[
+        x = 2
+        for x in *{1,2}
+          _G.other x
+        x
+      ]]
+      res = lint code, {}
+      assert.same {
+        {line: 2, msg: 'shadowing outer variable - `x`'}
+      }, res
+
+    it 'detects shadowing using local statements', ->
+      code = clean [[
+        x = 2
+        ->
+          local x
+          x = 2
+          x * 2
+        x
+      ]]
+      res = lint code, {}
+      assert.same {
+        {line: 3, msg: 'shadowing outer variable - `x`'}
+      }, res
+
+    it 'understand lexical scoping', ->
+      code = clean [[
+        for x in *{1,2}
+          _G.other x
+        x = 2 -- defined after previous declaration
+        x
+      ]]
+      res = lint code, {}
+      assert.same {}, res
+
+    it 'rvalue declaration values generally does not shadow lvalues', ->
+      code = clean [[
+        x = {
+          f: (x) ->
+        }
+        x
+      ]]
+      res = lint code, {}
+      assert.same {}, res
+
+    it 'implicitly local lvalue declarations are recognized (i.e. fndefs)', ->
+      code = clean [[
+        f = (x) -> x + f(x + 1)
+        f
+      ]]
+      res = lint code, {}
+      assert.same {}, res
+
+    it 'handles scope shadowing and unused variables correctly', ->
+      code = clean [[
+        (a) ->
+          [ { a, b } for a, b in pairs {} ]
+      ]]
+      res = lint code, report_params: true
+      assert.same {
+        {line: 1, msg: 'declared but unused - `a`'},
+        {line: 2, msg: 'shadowing outer variable - `a`'}
+      }, res
