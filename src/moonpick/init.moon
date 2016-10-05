@@ -96,6 +96,20 @@ is_fndef_assignment = (list) ->
   return false unless type(node) == 'table'
   node[1] == 'fndef'
 
+destructuring_decls = (list) ->
+  found = {}
+  for exp_list in *list
+    for t_var in *exp_list
+      if type(t_var) == 'table' and t_var[1] == 'ref'
+        append found, { t_var[2], t_var[-1] }
+
+  i = 1
+  ->
+    decl = found[i]
+    return nil unless decl
+    i += 1
+    decl[1], decl[2]
+
 handlers = {
   update: (node, scope, walk) ->
     target, val = node[2], node[4]
@@ -137,11 +151,8 @@ handlers = {
           -- chained assignment, e.g. 'x.foo = 1' - walk all references
           walk t, scope
         when 'table' -- handle decomposition syntax, e.g. '{:foo} = table'
-          key_targets = t[2]
-          for k_target in *key_targets
-            for field in *k_target
-              if type(field) == 'table' and field[1] == 'ref'
-                scope\add_assignment field[2], { pos: field[-1] or pos }
+          for name, d_pos in destructuring_decls(t[2])
+            scope\add_assignment name, { pos: d_pos or pos }
 
     walk values, scope if is_fndef
 
@@ -198,9 +209,14 @@ handlers = {
 
     walk args, scope if args
 
-    for name in *vars
-      if type(name) == 'string'
-        scope\add_declaration name, pos: node[-1], type: 'loop-var'
+    for var in *vars
+      switch type(var)
+        when 'string'
+          scope\add_declaration var, pos: node[-1], type: 'loop-var'
+        when 'table'
+          if var[1] == 'table'
+            for name, pos in destructuring_decls(var[2])
+              scope\add_declaration name, pos: pos, type: 'loop-var'
 
     walk body, scope
 

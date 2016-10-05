@@ -130,6 +130,31 @@ is_fndef_assignment = function(list)
   end
   return node[1] == 'fndef'
 end
+local destructuring_decls
+destructuring_decls = function(list)
+  local found = { }
+  for _index_0 = 1, #list do
+    local exp_list = list[_index_0]
+    for _index_1 = 1, #exp_list do
+      local t_var = exp_list[_index_1]
+      if type(t_var) == 'table' and t_var[1] == 'ref' then
+        append(found, {
+          t_var[2],
+          t_var[-1]
+        })
+      end
+    end
+  end
+  local i = 1
+  return function()
+    local decl = found[i]
+    if not (decl) then
+      return nil
+    end
+    i = i + 1
+    return decl[1], decl[2]
+  end
+end
 local handlers = {
   update = function(node, scope, walk)
     local target, val = node[2], node[4]
@@ -176,17 +201,10 @@ local handlers = {
       elseif 'chain' == _exp_0 then
         walk(t, scope)
       elseif 'table' == _exp_0 then
-        local key_targets = t[2]
-        for _index_1 = 1, #key_targets do
-          local k_target = key_targets[_index_1]
-          for _index_2 = 1, #k_target do
-            local field = k_target[_index_2]
-            if type(field) == 'table' and field[1] == 'ref' then
-              scope:add_assignment(field[2], {
-                pos = field[-1] or pos
-              })
-            end
-          end
+        for name, d_pos in destructuring_decls(t[2]) do
+          scope:add_assignment(name, {
+            pos = d_pos or pos
+          })
         end
       end
     end
@@ -273,12 +291,22 @@ local handlers = {
       walk(args, scope)
     end
     for _index_0 = 1, #vars do
-      local name = vars[_index_0]
-      if type(name) == 'string' then
-        scope:add_declaration(name, {
+      local var = vars[_index_0]
+      local _exp_0 = type(var)
+      if 'string' == _exp_0 then
+        scope:add_declaration(var, {
           pos = node[-1],
           type = 'loop-var'
         })
+      elseif 'table' == _exp_0 then
+        if var[1] == 'table' then
+          for name, pos in destructuring_decls(var[2]) do
+            scope:add_declaration(name, {
+              pos = pos,
+              type = 'loop-var'
+            })
+          end
+        end
       end
     end
     return walk(body, scope)
