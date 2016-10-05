@@ -238,12 +238,16 @@ describe 'moonpick', ->
       {:foo} = _G.bar
       {bar: other} = _G.zed
       {frob} = {1,2}
+      {numbers: {first}} = _G.frob
+      {props: {color: my_col}} = _G.what
       ]]
       res = lint code, {}
       assert.same {
         {line: 1, msg: 'declared but unused - `foo`'}
         {line: 2, msg: 'declared but unused - `other`'}
         {line: 3, msg: 'declared but unused - `frob`'}
+        {line: 4, msg: 'declared but unused - `first`'}
+        {line: 5, msg: 'declared but unused - `my_col`'}
       }, res
 
       code = '{:foo, :bar} = _G.bar'

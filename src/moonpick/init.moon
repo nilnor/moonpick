@@ -100,8 +100,13 @@ destructuring_decls = (list) ->
   found = {}
   for exp_list in *list
     for t_var in *exp_list
-      if type(t_var) == 'table' and t_var[1] == 'ref'
-        append found, { t_var[2], t_var[-1] }
+      if type(t_var) == 'table'
+        switch t_var[1]
+          when 'ref'
+            append found, { t_var[2], t_var[-1] }
+          when 'table'
+            for name, pos in destructuring_decls(t_var[2])
+              append found, { name, pos }
 
   i = 1
   ->

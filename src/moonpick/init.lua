@@ -137,11 +137,21 @@ destructuring_decls = function(list)
     local exp_list = list[_index_0]
     for _index_1 = 1, #exp_list do
       local t_var = exp_list[_index_1]
-      if type(t_var) == 'table' and t_var[1] == 'ref' then
-        append(found, {
-          t_var[2],
-          t_var[-1]
-        })
+      if type(t_var) == 'table' then
+        local _exp_0 = t_var[1]
+        if 'ref' == _exp_0 then
+          append(found, {
+            t_var[2],
+            t_var[-1]
+          })
+        elseif 'table' == _exp_0 then
+          for name, pos in destructuring_decls(t_var[2]) do
+            append(found, {
+              name,
+              pos
+            })
+          end
+        end
       end
     end
   end
