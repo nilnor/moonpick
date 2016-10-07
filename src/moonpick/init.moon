@@ -310,6 +310,18 @@ handlers = {
     cond_scope = scope\open_scope node, 'while'
     walk body, cond_scope, ref_pos if body
 
+  with: (node, scope, walk, ref_pos) ->
+    assigns, body = node[2], node[3]
+
+    with_scope = scope\open_scope node, 'with'
+    walk {assigns}, with_scope, ref_pos
+
+    -- mark any declaration as used immediately
+    for name in pairs with_scope.declared
+      with_scope\add_ref name, pos: ref_pos
+
+    walk {body}, with_scope, ref_pos
+
   -- if, elseif, unless
   cond_block: (node, scope, walk, ref_pos) ->
     op, conds, body = node[1], node[2], node[3]

@@ -79,6 +79,21 @@ describe 'moonpick', ->
         {line: 9, msg: 'accessing global - `x`'}
       }, res
 
+    it 'detects unused variables in with statements', ->
+      code = clean [[
+        with _G.foo
+          x = 1
+        with _G.bar
+          x = 2
+        x = 3
+        x
+      ]]
+      res = lint code, {}
+      assert.same {
+        {line: 2, msg: 'declared but unused - `x`'}
+        {line: 4, msg: 'declared but unused - `x`'}
+      }, res
+
     it 'detects while scoped unused variables', ->
       code = clean [[
         while true
@@ -98,6 +113,14 @@ describe 'moonpick', ->
           y
         x
        ]]
+      res = lint code, {}
+      assert.same {}, res
+
+    it 'handles inline with variable assignment statements', ->
+      code = clean [[
+        with foo = 2
+          foo += 3
+      ]]
       res = lint code, {}
       assert.same {}, res
 
@@ -450,6 +473,14 @@ describe 'moonpick', ->
         _G.foo[t] = true for t in pairs {}
         t! for t in *{}
         _G.foo += i for i = 1, 10
+      ]]
+      res = lint code
+      assert.same {}, res
+
+    it 'handles "with" statement assignments', ->
+      code = clean [[
+        with x = 2
+          .y + 2
       ]]
       res = lint code
       assert.same {}, res

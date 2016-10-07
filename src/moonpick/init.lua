@@ -442,6 +442,21 @@ local handlers = {
       return walk(body, cond_scope, ref_pos)
     end
   end,
+  with = function(node, scope, walk, ref_pos)
+    local assigns, body = node[2], node[3]
+    local with_scope = scope:open_scope(node, 'with')
+    walk({
+      assigns
+    }, with_scope, ref_pos)
+    for name in pairs(with_scope.declared) do
+      with_scope:add_ref(name, {
+        pos = ref_pos
+      })
+    end
+    return walk({
+      body
+    }, with_scope, ref_pos)
+  end,
   cond_block = function(node, scope, walk, ref_pos)
     local op, conds, body = node[1], node[2], node[3]
     walk({
