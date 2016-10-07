@@ -257,8 +257,8 @@ handlers = {
       scope = scope\open_scope node, 'decorated'
       scope.is_wrapper = true
 
-    walk {stm}, scope
     walk {vals}, scope
+    walk {stm}, scope
 
   comprehension: (node, scope, walk) ->
     exps, loop = node[2], node[3]

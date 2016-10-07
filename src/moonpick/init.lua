@@ -370,10 +370,10 @@ local handlers = {
       scope.is_wrapper = true
     end
     walk({
-      stm
+      vals
     }, scope)
     return walk({
-      vals
+      stm
     }, scope)
   end,
   comprehension = function(node, scope, walk)

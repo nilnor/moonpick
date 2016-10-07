@@ -454,14 +454,6 @@ describe 'moonpick', ->
       res = lint code
       assert.same {}, res
 
-    it 'foo2', ->
-      code = clean [[
-        if _G.data and _G.data.tokens
-          _G.data.tokens[token] = true for token in pairs _G.tokens
-      ]]
-      res = lint code
-      assert.same {}, res
-
     it 'handles while scoped unused variables', ->
       code = clean [[
         while true
@@ -565,3 +557,15 @@ describe 'moonpick', ->
         {line: 1, msg: 'declared but unused - `a`'},
         {line: 2, msg: 'shadowing outer variable - `a`'}
       }, res
+
+    it 'handles shadowing with decorated statements correctly', ->
+      code = clean [[
+        x = 1
+        (arg) -> x! for x in *arg
+      ]]
+      res = lint code, {}
+      assert.same {
+        {line: 1, msg: 'declared but unused - `x`'},
+        {line: 2, msg: 'shadowing outer variable - `x`'}
+      }, res
+
