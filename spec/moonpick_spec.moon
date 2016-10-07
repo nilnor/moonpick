@@ -241,10 +241,14 @@ describe 'moonpick', ->
       assert.same {}, res
 
     it 'detects unused imports', ->
-      code = 'import foo from _G.bar'
-      res = lint code, {}
+      code = clean [[
+        import foo from _G.bar
+        import \func from _G.thing
+      ]]
+      res = lint code
       assert.same {
         {line: 1, msg: 'declared but unused - `foo`'}
+        {line: 2, msg: 'declared but unused - `func`'}
       }, res
 
     it 'detects usages in import source lists', ->

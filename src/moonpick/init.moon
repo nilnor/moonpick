@@ -246,6 +246,9 @@ handlers = {
     names, values = node[2], node[3]
 
     for name in *names
+      if type(name) == 'table' and name[1] == 'colon'
+        name = name[2] -- import \foo from bar
+
       scope\add_declaration name, pos: node[-1] or ref_pos, type: 'import'
 
     walk {values}, scope, ref_pos

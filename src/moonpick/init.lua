@@ -355,6 +355,9 @@ local handlers = {
     local names, values = node[2], node[3]
     for _index_0 = 1, #names do
       local name = names[_index_0]
+      if type(name) == 'table' and name[1] == 'colon' then
+        name = name[2]
+      end
       scope:add_declaration(name, {
         pos = node[-1] or ref_pos,
         type = 'import'
