@@ -568,4 +568,3 @@ describe 'moonpick', ->
         {line: 1, msg: 'declared but unused - `x`'},
         {line: 2, msg: 'shadowing outer variable - `x`'}
       }, res
-

@@ -116,7 +116,7 @@ destructuring_decls = (list) ->
     decl[1], decl[2]
 
 handlers = {
-  update: (node, scope, walk) ->
+  update: (node, scope, walk, ref_pos) ->
     target, val = node[2], node[4]
 
     unless scope.is_wrapper
@@ -125,17 +125,17 @@ handlers = {
         scope.is_wrapper = true
 
     if target[1] == 'ref'
-      scope\add_assignment target[2], { pos: target[-1] }
+      scope\add_assignment target[2], pos: target[-1] or ref_pos
     else
-      walk target, scope
+      walk target, scope, ref_pos
 
-    walk {val}, scope
+    walk {val}, scope, ref_pos
 
   -- x, y = foo!, ...
-  assign: (node, scope, walk) ->
+  assign: (node, scope, walk, ref_pos) ->
     targets = node[2]
     values = node[3]
-    pos = node[-1]
+    pos = node[-1] or ref_pos
 
     unless scope.is_wrapper
       if is_loop_assignment(values)
@@ -146,63 +146,64 @@ handlers = {
 
     -- values are walked before the lvalue, except for fndefs where
     -- the lvalue is implicitly local
-    walk values, scope unless is_fndef
+    walk values, scope, ref_pos unless is_fndef
 
     for t in *targets
       switch t[1] -- type of target
         when 'ref' -- plain assignment, e.g. 'x = 1'
-          scope\add_assignment t[2], { pos: t[-1] or pos }
+          scope\add_assignment t[2], pos: t[-1] or pos
         when 'chain'
           -- chained assignment, e.g. 'x.foo = 1' - walk all references
-          walk t, scope
+          walk t, scope, ref_pos
         when 'table' -- handle decomposition syntax, e.g. '{:foo} = table'
           for name, d_pos in destructuring_decls(t[2])
-            scope\add_assignment name, { pos: d_pos or pos }
+            scope\add_assignment name, pos: d_pos or pos
 
-    walk values, scope if is_fndef
+    walk values, scope, ref_pos if is_fndef
 
-  chain: (node, scope, walk) ->
+  chain: (node, scope, walk, ref_pos) ->
     if not scope.is_wrapper and is_loop_assignment({node})
       scope = scope\open_scope node, 'chain'
       scope.is_wrapper = true
 
-    walk node, scope
+    walk node, scope, ref_pos
 
-  ref: (node, scope) ->
-    scope\add_ref node[2], pos: node[-1]
+  ref: (node, scope, walk, ref_pos) ->
+    scope\add_ref node[2], pos: node[-1] or ref_pos
 
-  fndef: (node, scope, walk) ->
+  fndef: (node, scope, walk, ref_pos) ->
     params, f_type, body = node[2], node[4], node[5]
     t = f_type == 'fat' and 'method' or 'function'
     scope = scope\open_scope node, t
+    pos = node[-1] or ref_pos
     for p in *params
       def = p[1]
       if type(def) == 'string'
-        scope\add_declaration def, pos: node[-1], type: 'param'
+        scope\add_declaration def, :pos, type: 'param'
         if p[2] -- default parameter assignment
-          walk {p[2]}, scope
+          walk {p[2]}, scope, ref_pos
       elseif type(def) == 'table' and def[1] == 'self'
-        scope\add_declaration def[2], pos: node[-1], type: 'param'
-        scope\add_ref def[2], pos: node[-1]
+        scope\add_declaration def[2], :pos, type: 'param'
+        scope\add_ref def[2], :pos
         if p[2] -- default parameter assignment
-          walk {p[2]}, scope
+          walk {p[2]}, scope, ref_pos
       else
-        walk {p}, scope
+        walk {p}, scope, ref_pos
 
-    walk body, scope
+    walk body, scope, ref_pos
 
-  for: (node, scope, walk) ->
+  for: (node, scope, walk, ref_pos) ->
     var, args, body = node[2], node[3], node[4]
 
     unless scope.is_wrapper
       scope = scope\open_scope node, 'for'
 
-    scope\add_declaration var, pos: node[-1], type: 'loop-var'
+    scope\add_declaration var, pos: node[-1] or ref_pos, type: 'loop-var'
 
-    walk args, scope
-    walk body, scope if body
+    walk args, scope, ref_pos
+    walk body, scope, ref_pos if body
 
-  foreach: (node, scope, walk) ->
+  foreach: (node, scope, walk, ref_pos) ->
     vars, args, body = node[2], node[3], node[4]
 
     if not body
@@ -212,44 +213,44 @@ handlers = {
     unless scope.is_wrapper
       scope = scope\open_scope node, 'for-each'
 
-    walk args, scope if args
+    walk args, scope, ref_pos if args
 
     for var in *vars
       switch type(var)
         when 'string'
-          scope\add_declaration var, pos: node[-1], type: 'loop-var'
+          scope\add_declaration var, pos: node[-1] or ref_pos, type: 'loop-var'
         when 'table'
           if var[1] == 'table'
             for name, pos in destructuring_decls(var[2])
-              scope\add_declaration name, pos: pos, type: 'loop-var'
+              scope\add_declaration name, pos: pos or ref_pos, type: 'loop-var'
 
-    walk body, scope
+    walk body, scope, ref_pos
 
-  declare_with_shadows: (node, scope, walk) ->
+  declare_with_shadows: (node, scope, walk, ref_pos) ->
     names = node[2]
     for name in *names
-      scope\add_declaration name, pos: node[-1]
+      scope\add_declaration name, pos: node[-1] or ref_pos
 
-  export: (node, scope, walk) ->
+  export: (node, scope, walk, ref_pos) ->
     names, vals = node[2], node[3]
     if type(names) == 'string' -- `export *`
       scope.exported_from = node[-1]
     else
       for name in *names
-        scope\add_declaration name, pos: node[-1], is_exported: true, type: 'export'
+        scope\add_declaration name, pos: node[-1] or ref_pos, is_exported: true, type: 'export'
 
     if vals
-      walk {vals}, scope
+      walk {vals}, scope, ref_pos
 
-  import: (node, scope, walk) ->
+  import: (node, scope, walk, ref_pos) ->
     names, values = node[2], node[3]
 
     for name in *names
-      scope\add_declaration name, pos: node[-1], type: 'import'
+      scope\add_declaration name, pos: node[-1] or ref_pos, type: 'import'
 
-    walk {values}, scope
+    walk {values}, scope, ref_pos
 
-  decorated: (node, scope, walk) ->
+  decorated: (node, scope, walk, ref_pos) ->
     stm, vals = node[2], node[3]
 
     -- statement modifiers with `if` and `unless` does not open a new scope
@@ -257,10 +258,10 @@ handlers = {
       scope = scope\open_scope node, 'decorated'
       scope.is_wrapper = true
 
-    walk {vals}, scope
-    walk {stm}, scope
+    walk {vals}, scope, ref_pos
+    walk {stm}, scope, ref_pos
 
-  comprehension: (node, scope, walk) ->
+  comprehension: (node, scope, walk, ref_pos) ->
     exps, loop = node[2], node[3]
 
     unless scope.is_wrapper
@@ -272,10 +273,10 @@ handlers = {
       exps = nil
 
     -- we walk the loop first, as it's there that the declarations are
-    walk {loop}, scope
-    walk {exps}, scope if exps
+    walk {loop}, scope, ref_pos
+    walk {exps}, scope, ref_pos if exps
 
-  tblcomprehension: (node, scope, walk) ->
+  tblcomprehension: (node, scope, walk, ref_pos) ->
     exps, loop = node[2], node[3]
 
     unless scope.is_wrapper
@@ -287,45 +288,45 @@ handlers = {
       loop = exps
       exps = nil
 
-    walk {loop}, scope
-    walk {exps}, scope if exps
+    walk {loop}, scope, ref_pos
+    walk {exps}, scope, ref_pos if exps
 
-  class: (node, scope, walk) ->
+  class: (node, scope, walk, ref_pos) ->
     name, parent, body = node[2], node[3], node[4]
-    scope\add_declaration name, pos: node[-1], type: 'class'
+    scope\add_declaration name, pos: node[-1] or ref_pos, type: 'class'
 
     -- handle implicit return of class, if last node of current scope
     if scope.node[#scope.node] == node
-      scope\add_ref name, pos: node[-1]
+      scope\add_ref name, pos: node[-1] or ref_pos
 
-    walk {parent}, scope
+    walk {parent}, scope, ref_pos
     scope = scope\open_scope node, 'class'
-    walk body, scope
+    walk body, scope, ref_pos
 
-  while: (node, scope, walk) ->
+  while: (node, scope, walk, ref_pos) ->
     conds, body = node[2], node[3]
-    walk {conds}, scope
+    walk {conds}, scope, ref_pos
 
     cond_scope = scope\open_scope node, 'while'
-    walk body, cond_scope if body
+    walk body, cond_scope, ref_pos if body
 
   -- if, elseif, unless
-  cond_block: (node, scope, walk) ->
+  cond_block: (node, scope, walk, ref_pos) ->
     op, conds, body = node[1], node[2], node[3]
-    walk {conds}, scope
+    walk {conds}, scope, ref_pos
 
     cond_scope = scope\open_scope node, op
-    walk body, cond_scope if body
+    walk body, cond_scope, ref_pos if body
 
     -- walk any following elseifs/elses as necessary
     rest = [n for i, n in ipairs(node) when i > 3]
     if #rest > 0
-      walk rest, scope
+      walk rest, scope, ref_pos
 
-  else: (node, scope, walk) ->
+  else: (node, scope, walk, ref_pos) ->
     body = node[2]
     scope = scope\open_scope node, 'else'
-    walk body, scope
+    walk body, scope, ref_pos
 
 }
 
@@ -333,18 +334,32 @@ handlers['if'] = handlers.cond_block
 handlers['elseif'] = handlers.cond_block
 handlers['unless'] = handlers.cond_block
 
-walk = (tree, scope) ->
+resolve_pos = (node, base_pos) ->
+  return node[-1] if node[-1]
+  if type(node) == 'table'
+    for sub_node in *node
+      if type(sub_node) == 'table'
+        if sub_node[-1]
+          return sub_node[-1]
+
+  base_pos
+
+walk = (tree, scope, base_pos) ->
   unless tree
     error "nil passed for node: #{debug.traceback!}"
 
+  unless base_pos
+    error "nil passed for base_pos: #{debug.traceback!}"
+
   for node in *tree
+    ref_pos = resolve_pos(node, base_pos)
     handler = handlers[node[1]]
     if handler
-      handler node, scope, walk
+      handler node, scope, walk, ref_pos
     else
       for sub_node in *node
         if type(sub_node) == 'table'
-          walk { sub_node }, scope
+          walk { sub_node }, scope, ref_pos
 
 report_on_scope = (scope, evaluator, inspections = {}) ->
 
@@ -423,7 +438,7 @@ lint = (code, opts = {}) ->
   return nil, err unless tree
   require('moon').p(tree) if opts.print_tree
   scope = Scope tree
-  walk tree, scope
+  walk tree, scope, 1
   report scope, code, opts
 
 lint_file = (file, opts = {}) ->
