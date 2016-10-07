@@ -293,7 +293,8 @@ handlers = {
 
   class: (node, scope, walk, ref_pos) ->
     name, parent, body = node[2], node[3], node[4]
-    scope\add_declaration name, pos: node[-1] or ref_pos, type: 'class'
+    if name
+      scope\add_declaration name, pos: node[-1] or ref_pos, type: 'class'
 
     -- handle implicit return of class, if last node of current scope
     if scope.node[#scope.node] == node
