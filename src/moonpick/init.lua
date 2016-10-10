@@ -420,13 +420,14 @@ local handlers = {
   end,
   class = function(node, scope, walk, ref_pos)
     local name, parent, body = node[2], node[3], node[4]
-    if name then
+    local handle_name = name and type(name) == 'string'
+    if handle_name then
       scope:add_declaration(name, {
         pos = node[-1] or ref_pos,
         type = 'class'
       })
     end
-    if scope.node[#scope.node] == node then
+    if handle_name and scope.node[#scope.node] == node then
       scope:add_ref(name, {
         pos = node[-1] or ref_pos
       })
