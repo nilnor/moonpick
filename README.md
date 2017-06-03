@@ -55,15 +55,43 @@ a function and still pleasing the linter.
 
 ### Unused loop variables
 
-Unused loop variables are detected. Similarly to unused function arguments it's
-possible to disable this completely in the [configuration](#configuration), or
-to provide an explicit whitelist only for loop variables. Moonpick ships with a
-default configuration that whitelists the arguments 'i' and 'j', or any variable
-starting with a '_'.
+Unused loop variables are detected. It's possible to disable this completely in
+the [configuration](#configuration), or to provide an explicit whitelist only
+for loop variables. Moonpick ships with a default configuration that whitelists
+the arguments 'i' and 'j', or any variable starting with a '_'.
 
 ### Undefined global accesses
 
 Similar to the built-in linter Moonpick detects undefined references.
+
+### Declaration shadowing
+
+Declaration shadowing occurs whenever a declaration shadows an earlier
+declaration with the same name. Consider the following code:
+
+```moonscript
+my_mod = require 'my_mod'
+
+-- [.. more code in between.. ]
+
+for my_mod in get_modules('foo')
+  my_mod.bar!
+```
+
+While it in the example above is rather clear that the `my_mod` declared in the
+loop is different from the top level `my_mod`, this can quickly become less
+clear should more code be inserted between the for declaration and later usage.
+At that point the code becomes ambiguous. Declaration shadowing helps with this
+by ensuring that each variable is defined at most once, in an unambiguous
+manner.
+
+The detection can be turned off completely by setting the `report_shadowing`
+configuration variable to false, and the whitelisting can be configured by
+specifying a `whitelist_shadowing` configuration list.
+
+_Note that for versions of Moonscript earlier than 0.5 these kind of shadowings
+would actually just re-use the prior declaration, leading to easily overlooked
+and confounding bugs._
 
 ## Configuration
 
