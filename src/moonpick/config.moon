@@ -159,7 +159,7 @@ evaluator = (opts = {}) ->
     '^_$',
     'tostring',
     '_ENV'
-  }
+  }, opts.whitelist_unused
 
   {
     allow_global_access: (p) ->

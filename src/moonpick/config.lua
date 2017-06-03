@@ -198,7 +198,7 @@ evaluator = function(opts)
     '^_$',
     'tostring',
     '_ENV'
-  })
+  }, opts.whitelist_unused)
   return {
     allow_global_access = function(p)
       return whitelist_global_access(p)
