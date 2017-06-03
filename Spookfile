@@ -1,4 +1,11 @@
+{:command} = require 'spookfile_helpers'
 {:is_file} = require "fs"
+
+-- builtin notifier
+notify.add 'terminal_notifier'
+
+-- user notifiers
+pcall notify.add, 'notifier'
 
 log_level "INFO"
 
@@ -6,14 +13,18 @@ spec = command "busted"
 compile = command "moonc"
 
 watch "src", "spec", ->
-  on_changed "^spec/(.*)_spec%.moon", (a) ->
-    spec "spec/#{a}_spec.moon"
+  on_changed "^spec/.+_spec%.moon", (event) ->
+    spec event.path
 
-  on_changed "^src/moonpick/(.+)%.moon", (base) ->
+  on_changed "^src/moonpick/.+%.moon", (event) ->
+    base = event.path\match '([^/]+)%.moon'
     spec_file = "spec/#{base}_spec.moon"
     spec_file = "spec/moonpick_spec.moon" unless is_file(spec_file)
 
     compile("src/moonpick/#{base}.moon") +
     spec(spec_file)
 
-notifier "#{os.getenv('HOME')}/.spook/notifiers"
+watch_file 'Spookfile', ->
+  on_changed (event) ->
+    notify.info "Reloading Spookfile..."
+    load_spookfile!
