@@ -93,6 +93,59 @@ _Note that for versions of Moonscript earlier than 0.5 these kind of shadowings
 would actually just re-use the prior declaration, leading to easily overlooked
 and confounding bugs._
 
+### Reassignment of function variables
+
+Reassigning of a previously defined variable holding a function value is rarely
+wanted, and is often the result of forgetting an earlier declaration.
+
+```moonscript
+-- with the following declaration and usage
+done = (x) -> x.foo and x.bar
+done({})
+
+-- one might mistakenly reuse the name further down
+i = 1
+-- [..]
+done = i == 10
+```
+
+This can can cause hard to debug issues, particularly if the reassignment is
+only done in a code path that is not always exercised.
+
+The detection can be turned off completely by setting the `report_fndef_reassignments`
+configuration variable to false, and the whitelisting can be configured by
+specifying a `whitelist_fndef_reassignments` configuration list.
+
+### Reassignment of top level variables from a function or method
+
+Reassignment of a top level variable from within a function or method can
+sometimes be the cause of non-obvious and elusive bugs, e.g.:
+
+```moonscript
+module = require 'lib.module'
+
+-- [..] much further down
+get_foo = (y) ->
+  module = y\match('%w+')\lower! -- mistakenly reusing the `module` var
+  return "#{module}_bar"
+```
+
+Should `get_foo` above only be called conditionally this could cause serious
+bugs to go unnoticed.
+
+In contrast to the other detections, this detection is _not_ enabled by default.
+The detection can be turned on by setting the `report_top_level_reassignments`
+configuration variable to true, and the whitelisting can be configured by
+specifying a `whitelist_top_level_reassignments` configuration list. It's highly
+recommended to enable this however.
+
+The reason this is not enabled by default is that it's not uncommon to have
+legitimate code that manipulates top level variables from within sub functions
+or methods. In order to avoid complaints from the linter one would then either
+have to configure the whitelist, or one would need to adopt a different style of
+coding where top level variables are not reassigned (for instance by using a
+table to hold module state instead).
+
 ## Configuration
 
 Moonpick supports a super set of the same configuration file and format as the
@@ -211,12 +264,12 @@ configuration options for `file`.
 #### evaluator(config)
 
 Returns an evaluator instance for the given linting options (e.g. as returned by
-`load_config_from`). The evaluator instance provides the following four
-functions (note that these are functions, to be invoked using the ordinary dot
-operator `.`):
+`load_config_from`). The evaluator instance provides the following functions
+(note that these are functions, to be invoked using the ordinary dot operator
+`.`):
 
 `allow_global_access`, `allow_unused_param`, `allow_unused_loop_variable`,
-`allow_unused`.
+`allow_unused`, `allow_fndef_reassignment`, `allow_top_level_reassignment`.
 
 All of these take as their first argument a symbol (as string) and returns
 `true` or `false` depending on whether the symbol passes linting or not.
