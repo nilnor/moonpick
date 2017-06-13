@@ -95,7 +95,9 @@ load_config_from = (config, file) ->
     'whitelist_loop_variables',
     'whitelist_params',
     'whitelist_unused',
-    'whitelist_shadowing'
+    'whitelist_shadowing',
+    'whitelist_fndef_reassignments',
+    'whitelist_top_level_reassignments'
   }
     if config[list]
       wl = {}

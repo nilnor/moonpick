@@ -101,7 +101,9 @@ load_config_from = function(config, file)
     'whitelist_loop_variables',
     'whitelist_params',
     'whitelist_unused',
-    'whitelist_shadowing'
+    'whitelist_shadowing',
+    'whitelist_fndef_reassignments',
+    'whitelist_top_level_reassignments'
   }
   for _index_0 = 1, #_list_0 do
     local list = _list_0[_index_0]
