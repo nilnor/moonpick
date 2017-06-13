@@ -624,7 +624,7 @@ describe 'moonpick', ->
             x = 2
             x
         ]]
-        res = lint code
+        res = lint code, report_top_level_reassignments: true
         assert.same {
           {line: 3, msg: 'reassigning top level variable within function - `x`'}
         }, res
@@ -637,7 +637,7 @@ describe 'moonpick', ->
               x = 2
               x
         ]]
-        res = lint code
+        res = lint code, report_top_level_reassignments: true
         assert.same {}, res
 
       it 'allows reassigning unitialized top level variables', ->
@@ -650,5 +650,5 @@ describe 'moonpick', ->
             y = 2
             x + y + z
         ]]
-        res = lint code
+        res = lint code, report_top_level_reassignments: true
         assert.same {}, res
