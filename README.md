@@ -237,3 +237,13 @@ details).
 
 Tests require `busted` to run, as well as the `pl` module (Penlight - `luarock
 install penlight`). Just run `busted` in the project's root directory.
+
+## Running it locally for development purposes
+
+Execute with a specified LUA_PATH pointing to the local `src` directory.
+Presuming a checkout location of `~/code/moonpick`:
+
+```bash
+LUA_PATH="$HOME/code/moonpick/src/?.lua;$HOME/code/moonpick/src/?/init.lua;$(lua -e 'print(package.path)')" ~/code/moonpick/bin/moonpick *.moon
+
+```
