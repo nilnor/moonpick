@@ -187,11 +187,15 @@ See the below example (lint_config.moon, using Moonscript syntax):
   whitelist_unused: {
     ["."]: {},
   }
-  -- loop variable and function parameter linting can be disabled
-  -- completely by uncommenting the below
 
-  -- report_loop_variables: false
-  -- report_params: false
+  -- below you'll see the boolean switches controlling the
+  -- linting, shown with the default value
+
+  -- report_loop_variables: true
+  -- report_params: true
+  -- report_shadowing: true
+  -- report_fndef_reassignments: true
+  -- report_top_level_reassignments: false
 }
 ```
 
@@ -282,6 +286,8 @@ incorrect reports. Should you encounter this then please open an issue with a
 code sample that illustrates the incorrect behaviour.
 
 ## License
+
+Copyright 2016-2017 Nils Nordman <nino at nordman.org>
 
 Moonpick is released under the MIT license (see the LICENSE file for the full
 details).
