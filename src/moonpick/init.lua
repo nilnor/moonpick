@@ -255,7 +255,10 @@ local handlers = {
       elseif 'table' == _exp_0 then
         for name, d_pos in destructuring_decls(t[2]) do
           scope:add_assignment(name, {
-            pos = d_pos or pos
+            pos = d_pos or pos,
+            type = 'variable',
+            has_rvalue = val ~= nil,
+            vtype = is_fndef and 'function' or nil
           })
         end
       end

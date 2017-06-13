@@ -189,7 +189,12 @@ handlers = {
           walk t, scope, ref_pos
         when 'table' -- handle decomposition syntax, e.g. '{:foo} = table'
           for name, d_pos in destructuring_decls(t[2])
-            scope\add_assignment name, { pos: d_pos or pos }
+            scope\add_assignment name, {
+              pos: d_pos or pos,
+              type: 'variable',
+              has_rvalue: val != nil,
+              vtype: is_fndef and 'function' or nil
+            }
 
       walk {val}, scope, ref_pos if is_fndef
 

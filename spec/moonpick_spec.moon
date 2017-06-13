@@ -1,4 +1,4 @@
--- Copyright 2016 Nils Nordman <nino@nordman.org>
+-- Copyright 2016-2017 Nils Nordman <nino@nordman.org>
 -- License: MIT (see LICENSE.md at the top-level directory of the distribution)
 
 moonpick = require 'moonpick'
@@ -620,13 +620,16 @@ describe 'moonpick', ->
       it 'detects reassigning top level variable from within functions', ->
         code = clean [[
           x = 1
+          {:y} = require 'bar'
           ->
             x = 2
-            x
+            y = 3
+            x + y
         ]]
         res = lint code, report_top_level_reassignments: true
         assert.same {
-          {line: 3, msg: 'reassigning top level variable within function - `x`'}
+          {line: 4, msg: 'reassigning top level variable within function - `x`'}
+          {line: 5, msg: 'reassigning top level variable within function - `y`'}
         }, res
 
       it 'allows reassigning non top level variables', ->
