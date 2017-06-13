@@ -49,8 +49,8 @@ describe 'moonpick', ->
     it 'detects function scoped, unused variables', ->
       code = clean [[
         x = -> a = 1
-        x = -> a = 1
-        x
+        y = -> a = 1
+        x + y
       ]]
       res = lint code, {}
       assert.same {
@@ -603,3 +603,52 @@ describe 'moonpick', ->
         {line: 1, msg: 'declared but unused - `x`'},
         {line: 2, msg: 'shadowing outer variable - `x`'}
       }, res
+
+  describe 'unwanted reassignments', ->
+    it 'detects overwriting function definitions', ->
+      code = clean [[
+        x = () ->
+          x = 2
+          x
+      ]]
+      res = lint code
+      assert.same {
+        {line: 2, msg: 'reassigning function variable - `x`'}
+      }, res
+
+    context '(top level reassignments)', ->
+      it 'detects reassigning top level variable from within functions', ->
+        code = clean [[
+          x = 1
+          ->
+            x = 2
+            x
+        ]]
+        res = lint code
+        assert.same {
+          {line: 3, msg: 'reassigning top level variable within function - `x`'}
+        }, res
+
+      it 'allows reassigning non top level variables', ->
+        code = clean [[
+          ->
+            x = 1
+            ->
+              x = 2
+              x
+        ]]
+        res = lint code
+        assert.same {}, res
+
+      it 'allows reassigning unitialized top level variables', ->
+        code = clean [[
+          local x
+          export y
+          _, z = 1
+          ->
+            x = 1
+            y = 2
+            x + y + z
+        ]]
+        res = lint code
+        assert.same {}, res

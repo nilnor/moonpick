@@ -7,6 +7,12 @@ config = require "moonpick.config"
 
 append = table.insert
 
+merge = (t1, t2) ->
+  t = {k,v for k,v in pairs t1}
+  for k,v in pairs t2
+    t[k] = v
+  t
+
 add = (map, key, val) ->
   list = map[key]
   unless list
@@ -21,6 +27,8 @@ Scope = (node, parent) ->
   used = {}
   scopes = {}
   shadowing_decls = {}
+  fndef_reassignments = {}
+  top_level_reassignments = {}
   pos = node[-1]
   if not pos and parent
     pos = parent.pos
@@ -30,10 +38,19 @@ Scope = (node, parent) ->
     :declared,
     :used,
     :shadowing_decls,
+    :fndef_reassignments,
+    :top_level_reassignments,
     :scopes,
     :node,
     :pos,
     type: 'default'
+
+    scope_is_in: (p) =>
+      p(@type) or (parent and parent\scope_is_in(p))
+
+    get_declaration: (name) =>
+      return declared[name][1] if declared[name]
+      parent and parent\get_declaration(name)
 
     has_declared: (name) =>
       return true if declared[name]
@@ -48,12 +65,21 @@ Scope = (node, parent) ->
       if parent and parent\has_declared(name)
         add shadowing_decls, name, opts
 
-      add declared, name, opts
+      add declared, name, merge(opts, {
+        top_level: not parent
+      })
 
     add_assignment: (name, ass) =>
-      return if @has_declared name
-      if not parent or not parent\has_declared(name)
-        add declared, name, ass
+      -- if we have name declared already, check whether the reassignment is OK
+      prev_declaration = @get_declaration name
+      if prev_declaration
+        if prev_declaration.vtype == 'function'
+          add fndef_reassignments, name, ass
+        elseif prev_declaration.top_level and prev_declaration.has_rvalue
+          if  @scope_is_in (t) -> t == 'function' or t == 'method'
+            add top_level_reassignments, name, ass
+      else
+        @add_declaration name, ass
 
     add_ref: (name, ref) =>
       if declared[name]
@@ -90,11 +116,6 @@ is_loop_assignment = (list) ->
   return false unless type(c_target) == 'table' and #c_target == 1
   op = c_target[1][1]
   op == 'for' or op == 'foreach'
-
-is_fndef_assignment = (list) ->
-  node = list[1]
-  return false unless type(node) == 'table'
-  node[1] == 'fndef'
 
 destructuring_decls = (list) ->
   found = {}
@@ -142,24 +163,35 @@ handlers = {
         scope = scope\open_scope node, 'loop-assignment'
         scope.is_wrapper = true
 
-    is_fndef = is_fndef_assignment values
+    is_fndef_node = (n) ->
+      return false unless n and type(n) == 'table'
+      n[1] == 'fndef'
 
-    -- values are walked before the lvalue, except for fndefs where
-    -- the lvalue is implicitly local
-    walk values, scope, ref_pos unless is_fndef
+    for i, t in ipairs targets
+      val = values[i]
 
-    for t in *targets
+      -- values are walked before the lvalue, except for fndefs where
+      -- the lvalue is implicitly local
+      is_fndef = is_fndef_node val
+
+      walk {val}, scope, ref_pos unless is_fndef
+
       switch t[1] -- type of target
         when 'ref' -- plain assignment, e.g. 'x = 1'
-          scope\add_assignment t[2], pos: t[-1] or pos
+          scope\add_assignment t[2], {
+            pos: t[-1] or pos,
+            type: 'variable',
+            has_rvalue: val != nil
+            vtype: is_fndef and 'function' or nil
+          }
         when 'chain'
           -- chained assignment, e.g. 'x.foo = 1' - walk all references
           walk t, scope, ref_pos
         when 'table' -- handle decomposition syntax, e.g. '{:foo} = table'
           for name, d_pos in destructuring_decls(t[2])
-            scope\add_assignment name, pos: d_pos or pos
+            scope\add_assignment name, { pos: d_pos or pos }
 
-    walk values, scope, ref_pos if is_fndef
+      walk {val}, scope, ref_pos if is_fndef
 
   chain: (node, scope, walk, ref_pos) ->
     if not scope.is_wrapper and is_loop_assignment({node})
@@ -226,11 +258,13 @@ handlers = {
 
     walk body, scope, ref_pos
 
+  -- e.g. 'local x'
   declare_with_shadows: (node, scope, walk, ref_pos) ->
     names = node[2]
     for name in *names
       scope\add_declaration name, pos: node[-1] or ref_pos
 
+  -- e.g. 'export y', 'export *'
   export: (node, scope, walk, ref_pos) ->
     names, vals = node[2], node[3]
     if type(names) == 'string' -- `export *`
@@ -419,6 +453,24 @@ report_on_scope = (scope, evaluator, inspections = {}) ->
       for node in *nodes
         append inspections, {
           msg: "shadowing outer variable - `#{name}`"
+          pos: node.pos or scope.pos,
+        }
+
+    -- fndef reassignments
+  for name, nodes in pairs scope.fndef_reassignments
+    unless evaluator.allow_fndef_reassignment(name)
+      for node in *nodes
+        append inspections, {
+          msg: "reassigning function variable - `#{name}`"
+          pos: node.pos or scope.pos,
+        }
+
+    -- top level reassignments
+  for name, nodes in pairs scope.top_level_reassignments
+    unless evaluator.allow_top_level_reassignment(name)
+      for node in *nodes
+        append inspections, {
+          msg: "reassigning top level variable within function - `#{name}`"
           pos: node.pos or scope.pos,
         }
 

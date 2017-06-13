@@ -92,7 +92,9 @@ load_config_from = function(config, file)
   end
   local opts = {
     report_loop_variables = config.report_loop_variables,
-    report_params = config.report_params
+    report_params = config.report_params,
+    report_fndef_reassignments = config.report_fndef_reassignments,
+    report_top_level_reassignments = config.report_top_level_reassignments
   }
   local _list_0 = {
     'whitelist_globals',
@@ -193,6 +195,16 @@ evaluator = function(opts)
     '_ENV'
   })
   local whitelist_shadowing = whitelist(opts.whitelist_shadowing) or builtin_whitelist_shadowing
+  local report_fndef_reassignments = opts.report_fndef_reassignments
+  if report_fndef_reassignments == nil then
+    report_fndef_reassignments = true
+  end
+  local whitelist_fndef_reassignments = whitelist(opts.whitelist_fndef_reassignments)
+  local report_top_level_reassignments = opts.report_top_level_reassignments
+  if report_top_level_reassignments == nil then
+    report_top_level_reassignments = false
+  end
+  local whitelist_top_level_reassignments = whitelist(opts.whitelist_top_level_reassignments)
   local whitelist_global_access = whitelist(builtin_whitelist_globals, opts.whitelist_globals)
   local whitelist_unused = whitelist({
     '^_$',
@@ -214,6 +226,12 @@ evaluator = function(opts)
     end,
     allow_shadowing = function(p)
       return not report_shadowing or (whitelist_shadowing(p) or builtin_whitelist_shadowing(p))
+    end,
+    allow_fndef_reassignment = function(p)
+      return not report_fndef_reassignments or whitelist_fndef_reassignments(p)
+    end,
+    allow_top_level_reassignment = function(p)
+      return not report_top_level_reassignments or whitelist_top_level_reassignments(p)
     end
   }
 end
