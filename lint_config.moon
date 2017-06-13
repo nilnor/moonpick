@@ -9,7 +9,7 @@
       'on_changed',
       'notify',
       'watch_file',
-      'load_spookfile'
+      'load_spookfile',
     }
 
     spec: {
