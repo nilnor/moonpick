@@ -1,5 +1,7 @@
 #! /usr/bin/env lua
 
+local VERSION = 0.7
+
 local status, moonpick = pcall(require, "moonpick")
 if not status then
   local local_path = ';./src/?.lua;./src/?/init.lua'
@@ -13,7 +15,14 @@ end
 
 local function validate_usage(args)
   local bail = function()
-    print "Usage: moonpick <file>, [file2, ..]"
+    print [[
+Usage: moonpick [opts] <file>, [file2, ..]
+
+Where [opts] can be the following:
+
+-v Shows moonpick version
+-h Shows this help
+]]
     os.exit(1)
   end
 
@@ -21,7 +30,12 @@ local function validate_usage(args)
 
   for _, a in ipairs(args) do
     if a:match('^%-') then
-      bail()
+      if a == '-v' or a == '--version' then
+        print("Moonpick version " .. VERSION)
+        os.exit(0)
+      else
+        bail()
+      end
     end
   end
 end
