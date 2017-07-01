@@ -83,7 +83,7 @@ if opts.stdin then
   if opts.filename then
     local moonpick_config = require('moonpick.config')
     local config_file = moonpick_config.config_for(opts.filename)
-    config = moonpick_config.load_config_from(config_file, opts.filename)
+    config = config_file and moonpick_config.load_config_from(config_file, opts.filename) or {}
   end
 
   lint(function() return moonpick.lint(file, config) end, opts.filename)
