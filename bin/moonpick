@@ -78,7 +78,7 @@ local function lint(linter, filename)
 end
 
 if opts.stdin then
-  local file = io.stdin:read('*a')
+  local source = io.stdin:read('*a')
   local config = {}
   if opts.filename then
     local moonpick_config = require('moonpick.config')
@@ -86,7 +86,7 @@ if opts.stdin then
     config = config_file and moonpick_config.load_config_from(config_file, opts.filename) or {}
   end
 
-  lint(function() return moonpick.lint(file, config) end, opts.filename)
+  lint(function() return moonpick.lint(source, config) end, opts.filename)
   os.exit(errors > 0 and 1 or 0)
 end
 
