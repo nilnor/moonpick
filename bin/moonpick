@@ -24,7 +24,7 @@ Where [opts] can be the following:
 -h                Shows this help
 --filename file   Filename used for lint_config with stdin
 
---                Read from stdin, must be last argument
+-                Read from stdin, must be last argument
 ]]
     os.exit(1)
   end
@@ -32,7 +32,7 @@ Where [opts] can be the following:
   if #args == 0 then bail() end
   local opts = {}
   for i, a in ipairs(args) do
-    if a == "--" then
+    if a == "-" then
       opts.stdin = true
       break
     elseif a:match('^%-') then
