@@ -1,5 +1,7 @@
 #! /usr/bin/env lua
 
+local append = table.insert
+
 local VERSION = 0.7
 
 local status, moonpick = pcall(require, "moonpick")
@@ -13,51 +15,83 @@ if not status then
   error "`moonpick` module not found, problems with the installation?"
 end
 
-local function validate_usage(args)
-  local bail = function()
-    print [[
+local usage = function()
+  print [[
 Usage: moonpick [opts] <file>, [file2, ..]
 
 Where [opts] can be the following:
 
--v                Shows moonpick version
--h                Shows this help
---filename file   Filename used for lint_config with stdin
+-v | --version    Shows moonpick version
+-h | --help       Shows this help
+--filename file   Filename used when linting from stdin (for config and name)
 
--                 Read from stdin, must be last argument
+The files to be linted should be given as paths, but the special value '-'
+can also be passed to enable linting content from stdin. When linting from
+stdin it's advisable to also pass the '--filename' parameter, in order to enable
+correct configuration lookup.
 ]]
+end
+
+local function parse_args(args)
+  if #args == 0 then
+    usage()
     os.exit(1)
   end
 
-  if #args == 0 then bail() end
   local opts = {}
-  for i, a in ipairs(args) do
-    if a == "-" then
-      opts.stdin = true
-      break
-    elseif a:match('^%-') then
-      if a == '-v' or a == '--version' then
-        print("Moonpick version " .. VERSION)
-        os.exit(0)
-      elseif a == '--filename' then
-          local file = args[i + 1]
-          if not file then
-            print("Missing value for option --filename")
-            os.exit(0)
-          end
-          opts.filename = args[i + 1]
+  local paths = {}
+  local opts_done = false
+  local i = 1
+
+  while i <= #args do
+    local arg = args[i]
+
+    if opts_done then
+      append(paths, arg)
+    else
+      if arg:match('^%-[%-%w]') then
+        if arg == '-v' or arg == '--version' then
+          opts.version = true
+        elseif arg == '-h' or arg == '--help' then
+          opts.help = true
+        elseif arg == '--filename' then
+            local file = args[i + 1]
+            if not file then
+              print("Missing value for option --filename")
+              os.exit(0)
+            end
+            opts.filename = file
+            i = i + 1
+        elseif arg == '--' then
+          opts_done = true
+        else
+          usage()
+          os.exit(1)
+        end
       else
-        bail()
+        opts_done = true
+        append(paths, arg)
       end
     end
+
+    i = i + 1
+
   end
-  return opts
+  return opts, paths
 end
 
-local args = {...}
-local opts = validate_usage(args)
-
+local opts, paths = parse_args({...})
 local errors = 0
+
+if opts.version then
+  print("Moonpick version " .. VERSION)
+  os.exit(0)
+elseif opts.help then
+  usage()
+  os.exit(0)
+end
+
+
 local function lint(linter, filename)
   local inspections, err = linter()
   if not inspections then
@@ -77,22 +111,22 @@ local function lint(linter, filename)
   end
 end
 
-if opts.stdin then
-  local source = io.stdin:read('*a')
-  local config = {}
-  if opts.filename then
-    local moonpick_config = require('moonpick.config')
-    local config_file = moonpick_config.config_for(opts.filename)
-    config = config_file and moonpick_config.load_config_from(config_file, opts.filename) or {}
+for i = 1, #paths do
+  local file = paths[i]
+
+  if file == '-' then
+    local source = io.stdin:read('*a')
+    local config = {}
+    if opts.filename then
+      local moonpick_config = require('moonpick.config')
+      local config_file = moonpick_config.config_for(opts.filename)
+      config = config_file and moonpick_config.load_config_from(config_file, opts.filename) or {}
+    end
+    local lint_name = opts.filename or '<stdin>'
+    lint(function() return moonpick.lint(source, config) end, lint_name)
+  else
+    lint(function() return moonpick.lint_file(file) end, file)
   end
-
-  lint(function() return moonpick.lint(source, config) end, opts.filename)
-  os.exit(errors > 0 and 1 or 0)
-end
-
-for i = 1, #args do
-  local file = args[i]
-  lint(function() return moonpick.lint_file(file) end, file)
 end
 
 os.exit(errors > 0 and 1 or 0)
