@@ -2,7 +2,7 @@
 
 local append = table.insert
 
-local VERSION = 0.7
+local VERSION = 0.8
 
 local status, moonpick = pcall(require, "moonpick")
 if not status then
