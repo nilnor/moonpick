@@ -89,6 +89,7 @@ load_config_from = (config, file) ->
     report_params: config.report_params
     report_fndef_reassignments: config.report_fndef_reassignments
     report_top_level_reassignments: config.report_top_level_reassignments
+    report_shadowing: config.report_shadowing
   }
   for list in *{
     'whitelist_globals',

@@ -57,6 +57,7 @@ describe 'config', ->
       cfg = {
         report_loop_variables: true
         report_params: false
+        report_shadowing: false
 
         whitelist_globals: {
           ['.']: { 'foo' },
@@ -88,6 +89,7 @@ describe 'config', ->
       assert.same { 'table' }, loaded.whitelist_shadowing
       assert.is_true loaded.report_loop_variables
       assert.is_false loaded.report_params
+      assert.is_false loaded.report_shadowing
 
 
     it 'loads <config> as a file when passed as a string', ->
@@ -178,3 +180,21 @@ describe 'config', ->
       it 'supports patterns', ->
         whitelist_unused = {'^a+'}
         assert.is_true evaluator(:whitelist_unused).allow_unused('aardwark')
+
+    describe 'allow_shadowing(p)', ->
+      it 'generally returns false', ->
+        assert.is_false evaluator({}).allow_shadowing('foo')
+
+      it 'returns false if config.report_shadowing is true', ->
+        assert.is_false evaluator(report_shadowing: true).allow_shadowing('foo')
+
+      it 'returns true if config.report_shadowing is false', ->
+        assert.is_true evaluator(report_shadowing: false).allow_shadowing('foo')
+
+      it 'returns true if config.whitelist_shadowing contains <p>', ->
+        whitelist_shadowing = {'foo'}
+        assert.is_true evaluator(:whitelist_shadowing).allow_shadowing('foo')
+
+      it 'supports patterns', ->
+        whitelist_shadowing = {'^a+'}
+        assert.is_true evaluator(:whitelist_shadowing).allow_shadowing('aardwark')

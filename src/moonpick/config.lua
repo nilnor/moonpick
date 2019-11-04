@@ -94,7 +94,8 @@ load_config_from = function(config, file)
     report_loop_variables = config.report_loop_variables,
     report_params = config.report_params,
     report_fndef_reassignments = config.report_fndef_reassignments,
-    report_top_level_reassignments = config.report_top_level_reassignments
+    report_top_level_reassignments = config.report_top_level_reassignments,
+    report_shadowing = config.report_shadowing
   }
   local _list_0 = {
     'whitelist_globals',
